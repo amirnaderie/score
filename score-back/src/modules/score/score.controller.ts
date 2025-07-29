@@ -65,7 +65,7 @@ export class ScoreController {
   @UseGuards(ApiKeyGuard)
   @Get('getTransferByReferenceCode/:referenceCode')
   @HttpCode(200)
-  getTransferByUuid(
+  getTransferByReferenceCode(
     @Param(
       'referenceCode',
       new (class {
@@ -78,14 +78,14 @@ export class ScoreController {
       })(),
     ) referenceCode: string,
   ) {
-    return this.scoreService.getTransferByUuid(referenceCode);
+    return this.scoreService.getTransferByReferenceCode(referenceCode);
   }
 
 
   @UseGuards(ApiKeyGuard)
   @Get('getUsedScoreByReferenceCode/:referenceCode')
   @HttpCode(200)
-  getUsedScoreByUuid(
+  getUsedScoreByReferenceCode(
     @Param(
       'referenceCode',
       new (class {
@@ -98,7 +98,7 @@ export class ScoreController {
       })(),
     ) referenceCode: string,
   ) {
-    return this.scoreService.getUsedScoreByUuid(referenceCode);
+    return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
   }
 
   @UseGuards(AuthGuard)

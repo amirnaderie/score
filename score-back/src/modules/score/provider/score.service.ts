@@ -242,12 +242,12 @@ export class ScoreService {
       } catch (error) {}
 
       if (referenceCode) {
-        const foundUuid = await this.TransferScoreRepository.findOne({
+        const foundReferenceCode = await this.TransferScoreRepository.findOne({
           where: {
             referenceCode,
           },
         });
-        if (foundUuid)
+        if (foundReferenceCode)
           return {
             message: ErrorMessages.REPETITIVE_INFO_FAILED,
             statusCode: 409,
@@ -363,12 +363,12 @@ export class ScoreService {
     let scoreRec: Partial<ScoreInterface>[] | null;
 
     if (referenceCode) {
-      const foundUuid = await this.UsedScoreRepository.findOne({
+      const foundReferenceCode = await this.UsedScoreRepository.findOne({
         where: {
           referenceCode,
         },
       });
-      if (foundUuid)
+      if (foundReferenceCode)
         return {
           message: ErrorMessages.REPETITIVE_INFO_FAILED,
           statusCode: 409,
@@ -587,7 +587,7 @@ export class ScoreService {
     };
   }
 
-  async getTransferByUuid(referenceCode: string) {
+  async getTransferByReferenceCode(referenceCode: string) {
     const TransferScoreRec = await this.TransferScoreRepository.findOne({
       where: {
         referenceCode,
@@ -617,7 +617,7 @@ export class ScoreService {
       statusCode: 200,
     };
   }
-  async getUsedScoreByUuid(referenceCode: string) {
+  async getUsedScoreByReferenceCode(referenceCode: string) {
     const usedScoreRec = await this.UsedScoreRepository.findOne({
       where: {
         referenceCode,

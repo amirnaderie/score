@@ -32,11 +32,8 @@ export class UsedScore extends BaseEntity {
   userId: string;
 
   @Index('IX_UsedScores_referenceCode')
-  @Column({
-    type: 'int',
-    nullable: true,
-  })
-  referenceCode;
+  @Column({ type: 'uniqueidentifier', nullable: true })
+  referenceCode?: string;
 
   @Column({
     type: 'bit',

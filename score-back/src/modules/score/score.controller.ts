@@ -61,36 +61,44 @@ export class ScoreController {
     );
   }
 
+
   @UseGuards(ApiKeyGuard)
   @Get('getTransferByReferenceCode/:referenceCode')
   @HttpCode(200)
-  getTransferByReferenceCode(
+  getTransferByUuid(
     @Param(
       'referenceCode',
-      new ParseIntPipe({
-        exceptionFactory: (error) =>
-          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
-      }),
-    )
-    referenceCode: number,
+      new (class {
+        transform(value: string) {
+          if (!/^[0-9a-fA-F-]{36}$/.test(value)) {
+            throw new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED);
+          }
+          return value;
+        }
+      })(),
+    ) referenceCode: string,
   ) {
-    return this.scoreService.getTransferByReferenceCode(referenceCode);
+    return this.scoreService.getTransferByUuid(referenceCode);
   }
+
 
   @UseGuards(ApiKeyGuard)
   @Get('getUsedScoreByReferenceCode/:referenceCode')
   @HttpCode(200)
-  getUsedScoreByReferenceCode(
+  getUsedScoreByUuid(
     @Param(
       'referenceCode',
-      new ParseIntPipe({
-        exceptionFactory: (error) =>
-          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
-      }),
-    )
-    referenceCode: number,
+      new (class {
+        transform(value: string) {
+          if (!/^[0-9a-fA-F-]{36}$/.test(value)) {
+            throw new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED);
+          }
+          return value;
+        }
+      })(),
+    ) referenceCode: string,
   ) {
-    return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
+    return this.scoreService.getUsedScoreByUuid(referenceCode);
   }
 
   @UseGuards(AuthGuard)

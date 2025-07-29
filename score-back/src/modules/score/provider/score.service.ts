@@ -193,7 +193,7 @@ export class ScoreService {
     toAccountNumber: number,
     score: number,
     userId: string,
-    referenceCode: number | null,
+    referenceCode: string | null,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
 
@@ -242,12 +242,12 @@ export class ScoreService {
       } catch (error) {}
 
       if (referenceCode) {
-        const foundReferenceCode = await this.TransferScoreRepository.findOne({
+        const foundUuid = await this.TransferScoreRepository.findOne({
           where: {
             referenceCode,
           },
         });
-        if (foundReferenceCode)
+        if (foundUuid)
           return {
             message: ErrorMessages.REPETITIVE_INFO_FAILED,
             statusCode: 409,
@@ -358,17 +358,17 @@ export class ScoreService {
     accountNumber: number,
     score: number,
     userId: string,
-    referenceCode: number | null,
+    referenceCode: string | null,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
 
     if (referenceCode) {
-      const foundReferenceCode = await this.UsedScoreRepository.findOne({
+      const foundUuid = await this.UsedScoreRepository.findOne({
         where: {
           referenceCode,
         },
       });
-      if (foundReferenceCode)
+      if (foundUuid)
         return {
           message: ErrorMessages.REPETITIVE_INFO_FAILED,
           statusCode: 409,
@@ -424,7 +424,7 @@ export class ScoreService {
     scoreRec: Partial<ScoreInterface>[] | null,
     score: number,
     userId: string,
-    referenceCode: number | null,
+    referenceCode: string | null,
   ) {
     try {
       if (scoreRec[0].usableScore! < score) {
@@ -587,7 +587,7 @@ export class ScoreService {
     };
   }
 
-  async getTransferByReferenceCode(referenceCode: number) {
+  async getTransferByUuid(referenceCode: string) {
     const TransferScoreRec = await this.TransferScoreRepository.findOne({
       where: {
         referenceCode,
@@ -617,7 +617,7 @@ export class ScoreService {
       statusCode: 200,
     };
   }
-  async getUsedScoreByReferenceCode(referenceCode: number) {
+  async getUsedScoreByUuid(referenceCode: string) {
     const usedScoreRec = await this.UsedScoreRepository.findOne({
       where: {
         referenceCode,

@@ -1,0 +1,38 @@
+{
+  "name": "score-front",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "start:dev": "cross-env ENV=dev next start -p 3002",
+    "start:stage": "cross-env ENV=stage next start -p 3002",
+    "start:prod": "cross-env ENV=prod next start -p 3002",
+    "devhttps": "next dev --port 3002 --experimental-https",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "axios": "^1.11.0",
+    "cross-env": "^7.0.3",
+    "js-cookie": "^3.0.5",
+    "next": "15.4.2",
+    "react": "19.1.0",
+    "react-confirm-alert": "^3.0.6",
+    "react-dom": "19.1.0",
+    "react-hot-toast": "^2.5.2",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.2",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

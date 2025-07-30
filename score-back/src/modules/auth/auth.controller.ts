@@ -8,11 +8,11 @@ export class AuthController {
 
   @Post()
   async authenticate(
-     @Body('codeParameter') codeParameter: string,
+    @Body('codeParameter') codeParameter: string,
     @Req() req: Request,
-    //@Res({ passthrough: true }) response: Response,
-     @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
+    //@Res() response: Response,
   ) {
-    return await this.authService.authenticate(req, response,codeParameter);
+    return await this.authService.authenticate(req, response, codeParameter);
   }
 }

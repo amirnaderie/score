@@ -65,22 +65,22 @@ export class AuthService {
       cookieOptions,
     );
 
-    return response.status(HttpStatus.OK).json({
-      message: 'Successfully signed in',
-      data: {
-        userId: userData.id,
-        userName: userData.username,
-        roles: userData.roles,
-      },
-    });
-    // return {
+    // return response.status(HttpStatus.OK).json({
     //   message: 'Successfully signed in',
     //   data: {
     //     userId: userData.id,
     //     userName: userData.username,
     //     roles: userData.roles,
     //   },
-    // };
+    // });
+    return {
+      message: 'Successfully signed in',
+      data: {
+        userId: userData.id,
+        userName: userData.username,
+        roles: userData.roles,
+      },
+    };
   }
 
   async createOption(zarrirExp: number) {

@@ -45,10 +45,9 @@ export class TransferScoreDto {
   @IsPositive({ message: 'امتیاز باید بزرگتر از صفر باشد' })
   score: number;
 
-  @IsOptional()
-  @IsString()
-  @Matches(/^[0-9a-fA-F-]{36}$/, { message: 'referenceCode باید یک uuid معتبر باشد' })
-  @MaxLength(36)
-  @MinLength(36)
-  referenceCode?: string;
+  @IsNumber()
+  @IsPositive({ message: 'شناسه ارجاع باید عدد مثبت باشد' })
+  @Min(10000, { message: 'شناسه ارجاع باید حداقل 5 رقم باشد' })
+  @Max(999999999, { message: 'شناسه ارجاع باید حداکثر 9 رقم باشد' })
+  referenceCode?: number;
 }

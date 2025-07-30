@@ -68,3 +68,12 @@ export const validateIranianNationalCode = (nationalCode: number) => {
     return checkDigit === 11 - remainder;
   }
 };
+
+
+  // Format number with thousands separator
+  export const formatNumber = (value: string) => {
+    if (!value) return "";
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, "");
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };

@@ -61,26 +61,21 @@ export class ScoreController {
     );
   }
 
-
   @UseGuards(ApiKeyGuard)
   @Get('getTransferByReferenceCode/:referenceCode')
   @HttpCode(200)
   getTransferByReferenceCode(
     @Param(
       'referenceCode',
-      new (class {
-        transform(value: string) {
-          if (!/^[0-9a-fA-F-]{36}$/.test(value)) {
-            throw new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED);
-          }
-          return value;
-        }
-      })(),
-    ) referenceCode: string,
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    referenceCode: number,
   ) {
     return this.scoreService.getTransferByReferenceCode(referenceCode);
   }
-
 
   @UseGuards(ApiKeyGuard)
   @Get('getUsedScoreByReferenceCode/:referenceCode')
@@ -88,15 +83,12 @@ export class ScoreController {
   getUsedScoreByReferenceCode(
     @Param(
       'referenceCode',
-      new (class {
-        transform(value: string) {
-          if (!/^[0-9a-fA-F-]{36}$/.test(value)) {
-            throw new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED);
-          }
-          return value;
-        }
-      })(),
-    ) referenceCode: string,
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    referenceCode: number,
   ) {
     return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
   }

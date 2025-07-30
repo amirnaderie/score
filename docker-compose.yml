@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   score-back:
-    image: score-back:1.0.3
+    image: score-back:1.0.4
     build:
       context: ./score-back
       dockerfile: Dockerfile
@@ -20,7 +20,7 @@ services:
       - ./score-back/.env.prod  # Only load production env file
 
   score-front:
-    image: score-front:1.0.3
+    image: score-front:1.0.4
     build:
       context: ./score-front
       dockerfile: Dockerfile
@@ -39,4 +39,4 @@ networks:
   score-net:
     driver: bridge
 
-# ENV=stage docker-compose up --build -d
+#docker-compose up --build -d

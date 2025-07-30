@@ -14,7 +14,7 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   async authenticate(req: Request, response: Response, codeParameter: string) {
     //try {
@@ -30,15 +30,11 @@ export class AuthService {
     });
     let tokenFromSSO;
 
-    tokenFromSSO = await axios.post(
-      `${authUrl}token`,
-      parameterValue,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+    tokenFromSSO = await axios.post(`${authUrl}token`, parameterValue, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-    );
+    });
     try {
     } catch (error) {
       this.eventEmitter.emit(
@@ -47,22 +43,20 @@ export class AuthService {
           logTypes: logTypes.ERROR,
           fileName: 'auth.service',
           method: 'authenticate',
-          message: 'ُcalling zarrir error',
+          message: error.message || 'ُcalling zarrir error',
           requestBody: JSON.stringify({ codeParameter }),
           stack: error.stack,
         }),
       );
     }
     const decodedHeader: any = jwtDecode(tokenFromSSO.data.access_token);
-    const { aud, exp } = decodedHeader
+    const { aud, exp } = decodedHeader;
     if (aud !== this.configService.get('CLIENT_ID')) {
-      throw new UnauthorizedException("شما مجوز دسترسی به این سامانه را ندارید")
+      throw new UnauthorizedException(
+        'شما مجوز دسترسی به این سامانه را ندارید',
+      );
     }
-    if (decodedHeader.aud !== this.configService.get('CLIENT_ID')) {
-      return response
-        .status(HttpStatus.UNAUTHORIZED)
-        .json({ message: 'authentication failed' });
-    }
+
     const userData = await this.verifyToken(tokenFromSSO.data.access_token);
     const { cookieOptions } = await this.createOption(exp);
     response.cookie(
@@ -98,9 +92,12 @@ export class AuthService {
     const cookieOptions: CookieOptions = {
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: maxAgeInSeconds,// parseInt(this.configService.get('COOKIE_EXPIRES') as string),
+      maxAge: maxAgeInSeconds, // parseInt(this.configService.get('COOKIE_EXPIRES') as string),
       secure: process.env.ENV === 'prod',
-      domain: process.env.ENV === 'dev' ? undefined : this.configService.get<string>('COOKIE_DOMAIN'),
+      domain:
+        process.env.ENV === 'dev'
+          ? undefined
+          : this.configService.get<string>('COOKIE_DOMAIN'),
       path: '/', // Explicitly set path
     };
     return { cookieOptions };

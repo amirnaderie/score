@@ -25,13 +25,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div className="flex justify-end gap-3 text-xs">
           <button
             onClick={onConfirm}
-            className="bg-blue-600   cursor-pointer hover:bg-blue-700 text-white  py-2 px-4 rounded transition-colors duration-200"
+            className="bg-blue-300   cursor-pointer hover:bg-blue-700   py-2 px-4 rounded transition-colors duration-200"
           >
             بله، ثبت کن
           </button>
           <button
             onClick={onClose}
-            className="bg-gray-400  cursor-pointer hover:bg-gray-500 text-white  py-2 px-4 rounded transition-colors duration-200"
+            className="bg-gray-200  cursor-pointer hover:bg-gray-500   py-2 px-4 rounded transition-colors duration-200"
           >
             خیر
           </button>

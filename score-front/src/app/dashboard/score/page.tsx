@@ -4,7 +4,11 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 
 import toast from "react-hot-toast";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
-import { handleInput, validateIranianNationalCode } from "@/app/lib/utility";
+import {
+  formatNumber,
+  handleInput,
+  validateIranianNationalCode,
+} from "@/app/lib/utility";
 import { fetchWithAuthClient } from "@/app/lib/fetchWithAuthClient";
 import { UseStore } from "@/store/useStore";
 import { User } from "@/app/type";
@@ -94,7 +98,7 @@ export default function Home() {
       const json: ApiResponse = await res.json();
       if (json.statusCode !== 200) {
         //setError(json.message || json.error || "Unknown error");
-        toast.error("خطا در عملیات!");
+        toast.error(json.message);
       } else {
         const { scoresRec: scoresData, ownerName } = json.data;
         if (
@@ -111,8 +115,11 @@ export default function Home() {
       throw error;
     }
   };
+
+  // Keep only digits in state, but show formatted value
   const handleConsumeChange = (accountNumber: string, value: string) => {
-    setConsumeScores((prev) => ({ ...prev, [accountNumber]: value }));
+    const digits = value.replace(/\D/g, "");
+    setConsumeScores((prev) => ({ ...prev, [accountNumber]: digits }));
   };
 
   const acceptUse = async (id: number) => {
@@ -186,9 +193,16 @@ export default function Home() {
   const handleSaveConsume = async (accountNumber: string) => {
     setSaving((prev) => ({ ...prev, [accountNumber]: true }));
     // setSaveMsg((prev) => ({ ...prev, [accountNumber]: "" }));
-    const scoreId = data.find(
+
+    const currentScore: ScoreRow = data.find(
       (scoreItem: ScoreRow) => scoreItem.accountNumber === accountNumber
-    )?.scoreId;
+    )!;
+
+    if (Number(consumeScores[accountNumber]) > currentScore.usableScore) {
+      toast.error("مانده کافی نیست!");
+      setSaving((prev) => ({ ...prev, [accountNumber]: false }));
+      return false;
+    }
     try {
       const res = await fetchWithAuthClient(
         `${process.env.NEXT_PUBLIC_API_URL}/score/consume`,
@@ -196,7 +210,7 @@ export default function Home() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            scoreId,
+            scoreId: currentScore.scoreId,
             score: Number(consumeScores[accountNumber]),
           }),
           credentials: "include",
@@ -236,6 +250,7 @@ export default function Home() {
             className="border rounded px-3 py-2 flex-1 ltr w-4/6  placeholder:text-right placeholder:text-xs"
             onInput={(e) => handleInput(e, 10)}
             value={nationalCode}
+            autoFocus
             onChange={(e) => setNationalCode(e.target.value)}
             placeholder=" کد ملی صاحب امتیاز را وارد نمایید"
             maxLength={10}
@@ -246,7 +261,7 @@ export default function Home() {
             }}
           />
           <button
-            className="bg-blue-600 text-white w-24  py-2 rounded disabled:opacity-50 flex justify-center items-center"
+            className="bg-blue-300  w-24  py-2 rounded disabled:opacity-50 flex justify-center items-center"
             onClick={handleFetch}
             disabled={loading || !nationalCode}
           >
@@ -305,9 +320,12 @@ export default function Home() {
                     </span>
                     <span className=" py-2 flex justify-center w-[25%]">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="border rounded px-2 py-1 w-[70%] ltr bg-white"
-                        value={consumeScores[row.accountNumber] || ""}
+                        value={formatNumber(
+                          consumeScores[row.accountNumber] || ""
+                        )}
                         onChange={(e) =>
                           handleConsumeChange(row.accountNumber, e.target.value)
                         }
@@ -316,12 +334,12 @@ export default function Home() {
                           e.stopPropagation();
                           setSelectedIndex(idx);
                         }}
-                        onInput={(e) => handleInput(e, 9)}
+                        onInput={(e) => handleInput(e, 11)}
                       />
                     </span>
                     <span className=" px-3 py-2 w-[10%] text-sm">
                       <button
-                        className="bg-green-600 w-full  text-white px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                        className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                         disabled={
                           saving[row.accountNumber] ||
                           !consumeScores[row.accountNumber]
@@ -334,7 +352,7 @@ export default function Home() {
                         {saving[row.accountNumber] ? (
                           <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
                         ) : (
-                          "ذخیره"
+                          "ثبت"
                         )}
                       </button>
                     </span>
@@ -356,7 +374,7 @@ export default function Home() {
                   <div className="text-gray-500">No used scores.</div>
                 ) : (
                   <div className="w-full  text-sm ">
-                    <div className="w-full flex justify-start text-white bg-gray-500 rounded-t-md">
+                    <div className="w-full flex justify-start  bg-gray-300 rounded-t-md">
                       <span className=" px-2 py-1 w-[25%] text-center">
                         امتیاز
                       </span>
@@ -385,7 +403,7 @@ export default function Home() {
                               !u.status && (
                                 <>
                                   <button
-                                    className="bg-green-600 w-[40%]  text-white px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                    className="bg-green-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                                     // disabled={
                                     //   saving[row.accountNumber] ||
                                     //   !consumeScores[row.accountNumber]
@@ -402,7 +420,7 @@ export default function Home() {
                                     )}
                                   </button>
                                   <button
-                                    className="bg-red-400 w-[40%]  text-white px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                    className="bg-red-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                                     // disabled={
                                     //   saving[row.accountNumber] ||
                                     //   !consumeScores[row.accountNumber]

@@ -47,5 +47,5 @@ EXPOSE 3002
 # Keep your dynamic command
 CMD npm run start:prod
 
-# docker build -t score-front:v1.0.6 .
-# docker save score-front > score-front1.0.6.tar
+# docker build -t score-front:v1.0.4 .
+# docker save score-front > score-front1.0.4.tar

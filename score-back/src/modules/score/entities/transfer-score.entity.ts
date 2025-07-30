@@ -36,7 +36,10 @@ export class TransferScore extends BaseEntity {
   })
   userId: string;
 
-  @Index('IX_TransferScores_referenceCode')
-  @Column({ type: 'uniqueidentifier', nullable: true })
-  referenceCode?: string;
+@Index('IX_TransferScores_referenceCode')
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  referenceCode
 }

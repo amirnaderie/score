@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as querystring from 'querystring';
@@ -8,6 +8,7 @@ import { CookieOptions, Response } from 'express';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/log.event';
 import { logTypes } from 'src/modules/event/enums/logType.enum';
+import { ErrorMessages } from 'src/constants/error-messages.constants';
 
 @Injectable()
 export class AuthService {
@@ -110,6 +111,7 @@ export class AuthService {
       const authUrl = this.configService.get('AUTH_URL');
       const basic = `${clientId}:${clientSecret}`;
       const encodedToken = Buffer.from(basic).toString('base64');
+      const roles = this.configService.get<string>('ROLES');
       process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
       if (!token || token === '') {
         // Optionally use a logger here
@@ -126,11 +128,66 @@ export class AuthService {
           },
         },
       );
+
       if (response.status === 200) {
-        return response.data;
+        const allowedRoles = roles
+          ? roles.split(',').map((role) => role.trim())
+          : [];
+        const userData = response.data;
+        if (
+          !userData.roles ||
+          !Array.isArray(userData.roles) ||
+          userData.roles.length === 0
+        ) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'auth.service',
+              method: 'verifyToken',
+              message: `User has no roles. token: ${token}, response data: ${JSON.stringify(
+                response.data,
+              )}`,
+              requestBody: JSON.stringify(response.data),
+              stack: '',
+            }),
+          );
+          throw new UnauthorizedException(ErrorMessages.AUTH_FAILED);
+        }
+
+        const hasAllowedRole = userData.roles.some((role: string) =>
+          allowedRoles.includes(role),
+        );
+
+        if (!hasAllowedRole) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'auth.service',
+              method: 'verifyToken',
+              message: `User does not have required roles. token: ${token}, roles: ${JSON.stringify(
+                userData.roles,
+              )}`,
+              requestBody: JSON.stringify(response.data),
+              stack: '',
+            }),
+          );
+          throw new UnauthorizedException(ErrorMessages.AUTH_FAILED);
+        }
+
+        return userData;
       } else {
-        console.error(
-          `verifyToken failed  Status: ${response.status} token: ${token}`,
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'auth.service',
+            method: 'verifyToken',
+            message: `verifyToken failed  Status: ${response.status} token: ${token}`,
+            requestBody: '',
+            stack: '',
+          }),
         );
         return null;
       }
@@ -144,9 +201,31 @@ export class AuthService {
             typeof error.response.data === 'string' &&
             error.response.data.includes('invalid token')))
       ) {
-        throw new Error('invalid token');
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'auth.service',
+            method: 'verifyToken',
+            message: `error in verifyToken `,
+            requestBody: '',
+            stack: error.stack,
+          }),
+        );
+        return null;
       } else {
-        throw new Error('error in server');
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'auth.service',
+            method: 'verifyToken',
+            message: `error in verifyToken `,
+            requestBody: '',
+            stack: error.stack,
+          }),
+        );
+        throw new UnauthorizedException(ErrorMessages.AUTH_FAILED);
       }
     }
   }

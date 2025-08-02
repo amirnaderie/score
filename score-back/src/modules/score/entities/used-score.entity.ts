@@ -31,6 +31,25 @@ export class UsedScore extends BaseEntity {
   })
   userId: string;
 
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  personalCode: number;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  branchCode: number;
+
+  @Column({
+    type: 'nvarchar',
+    nullable: true,
+    length: 60,
+  })
+  branchName: string;
+
   @Index('IX_TransferScores_referenceCode')
   @Column({
     type: 'int',

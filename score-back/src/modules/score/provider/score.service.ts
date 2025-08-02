@@ -20,6 +20,7 @@ import { ScoreInterface } from '../interfaces/score.interface';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { BankCoreProvider } from './coreBank.provider';
 import { ConfigService } from '@nestjs/config';
+import { User } from 'src/interfaces/user.interface';
 const moment = require('moment-jalaali');
 
 @Injectable()
@@ -98,6 +99,9 @@ export class ScoreService {
               updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
               userId: usedItem.userId,
               status: usedItem.status,
+              personalCode: usedItem.personalCode,
+              branchCode: usedItem.branchCode,
+              branchName: usedItem.branchName,
             };
           }),
         });
@@ -417,13 +421,14 @@ export class ScoreService {
         error: 'Not Found',
       };
     }
-    return this.consumeScore(scoreRec, score, userId, referenceCode);
+    return this.consumeScore(scoreRec, score, userId, '', referenceCode);
   }
 
   async consumeScore(
     scoreRec: Partial<ScoreInterface>[] | null,
     score: number,
     userId: string,
+    userName: string,
     referenceCode: number | null,
   ) {
     try {
@@ -448,11 +453,19 @@ export class ScoreService {
         };
         //throw new BadRequestException(ErrorMessages.INSUFFICIENT_SCORE);
       }
+      let personnelData: any = null;
+
+      if (userName) personnelData = await this.getPersonnelData(userName);
 
       const UseScore = this.UsedScoreRepository.create({
         usedScore: { id: scoreRec[0].id },
         score: score,
         userId,
+        personalCode: userName ? Number(userName) : null,
+        branchCode: personnelData?.branchCode
+          ? Number(personnelData?.branchCode)
+          : null,
+        branchName: personnelData?.branchName ?? null,
         referenceCode: referenceCode,
       });
       await this.UsedScoreRepository.save(UseScore);
@@ -468,7 +481,7 @@ export class ScoreService {
    */
   public async usedScoreForFront(
     createUseScoreDto: CreateUseScoreDto,
-    userId: string,
+    user: User,
     ip: string,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
@@ -486,7 +499,7 @@ export class ScoreService {
           message: 'ُThere is no record for given nationalCode',
           requestBody: JSON.stringify({
             scoreId: createUseScoreDto.scoreId,
-            userId,
+            user,
             ip,
           }),
           stack: '',
@@ -503,7 +516,13 @@ export class ScoreService {
       'exec getScores @nationalCode=@0,@accountNumber=@1',
       [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
     );
-    return this.consumeScore(scoreRow, createUseScoreDto.score, userId, null);
+    return this.consumeScore(
+      scoreRow,
+      createUseScoreDto.score,
+      user.id,
+      user.userName,
+      null,
+    );
   }
 
   async getTransferScoreFrom(
@@ -718,5 +737,36 @@ export class ScoreService {
       message: ErrorMessages.SUCCESSFULL,
       statusCode: 200,
     };
+  }
+
+  async getPersonnelData(personelCode: string) {
+    try {
+      const AFRA_URL = this.configService.get<string>('AFRA_URL');
+      const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
+      const retVal = await fetch(`${AFRA_URL}/findByCode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${AFRA_TOKEN}`,
+        },
+        body: JSON.stringify({
+          code: personelCode,
+        }),
+      });
+      const userDetailData = await retVal.json();
+      return {
+        branchCode: userDetailData.currentUnit.code,
+        branchName: userDetailData.currentUnit.name,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'score.service',
+        'getPersonnelData',
+        { personelCode },
+      );
+      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+    }
   }
 }

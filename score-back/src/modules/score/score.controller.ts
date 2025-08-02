@@ -37,7 +37,6 @@ export class ScoreController {
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
-  @HttpCode(200)
   getTransferScoreFrom(@Query() getTransferScoreDto: GetTransferScoreDto) {
     const fromNationalCode = Number(getTransferScoreDto.nationalCode);
     const fromAccountNumber = Number(getTransferScoreDto.accountNumber);
@@ -50,7 +49,6 @@ export class ScoreController {
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersTo')
-  @HttpCode(200)
   getTransferScoreTo(@Query() getTransferScoreDto: GetTransferScoreDto) {
     const fromNationalCode = Number(getTransferScoreDto.nationalCode);
     const fromAccountNumber = Number(getTransferScoreDto.accountNumber);
@@ -63,7 +61,6 @@ export class ScoreController {
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransferByReferenceCode/:referenceCode')
-  @HttpCode(200)
   getTransferByReferenceCode(
     @Param(
       'referenceCode',
@@ -79,7 +76,6 @@ export class ScoreController {
 
   @UseGuards(ApiKeyGuard)
   @Get('getUsedScoreByReferenceCode/:referenceCode')
-  @HttpCode(200)
   getUsedScoreByReferenceCode(
     @Param(
       'referenceCode',
@@ -170,7 +166,7 @@ export class ScoreController {
     @Req() req,
   ) {
     const ip = req.ip || req.connection.remoteAddress;
-    return this.scoreService.usedScoreForFront(createUseScoreDto, user.id, ip);
+    return this.scoreService.usedScoreForFront(createUseScoreDto, user, ip);
   }
   @UseGuards(AuthGuard)
   @Put('accept-use')

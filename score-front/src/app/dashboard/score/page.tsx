@@ -20,6 +20,8 @@ interface UsedScore {
   updatedAt: string;
   userId: string;
   status: boolean;
+  personalCode: number | null;
+  branchCode: number | null;
 }
 
 interface ScoreRow {
@@ -261,7 +263,7 @@ export default function Home() {
             }}
           />
           <button
-            className="bg-blue-300  w-24  py-2 rounded disabled:opacity-50 flex justify-center items-center"
+            className="bg-blue-300  w-24  py-2 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
             onClick={handleFetch}
             disabled={loading || !nationalCode}
           >
@@ -365,7 +367,7 @@ export default function Home() {
           {selectedIndex !== null &&
           data[selectedIndex] &&
           data[selectedIndex].usedScore.length ? (
-            <div className=" w-[60%]">
+            <div className=" w-full">
               <div className="bg-gray-50 p-4 rounded shadow">
                 <div className="font-semibold mb-2 text-sm">
                   امتیازهای استفاده شده
@@ -378,10 +380,19 @@ export default function Home() {
                       <span className=" px-2 py-1 w-[25%] text-center">
                         امتیاز
                       </span>
-                      <span className=" px-2 py-1 w-[25%] text-center">
+                      <span className=" px-2 py-1 w-[15%] text-center">
                         تاریخ
                       </span>
-                      <span className=" px-2 py-1 w-[50%] text-center">
+
+                      <span className=" px-2 py-1 w-[15%] text-center">
+                        کد شعبه
+                      </span>
+
+                      <span className=" px-2 py-1 w-[15%] text-center">
+                        کد پرسنلی
+                      </span>
+
+                      <span className=" px-2 py-1 w-[30%] text-center">
                         عملیات
                       </span>
                     </div>
@@ -394,10 +405,16 @@ export default function Home() {
                           <span className=" px-2 py-1 text-center w-[25%]">
                             {Number(u.score).toLocaleString()}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[25%]">
-                            {u.status ? u.updatedAt : u.createdAt}
+                          <span className=" px-2 py-1 text-center w-[15%]">
+                            {u.status ? u.updatedAt : "در دست اقدام"}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[50%] flex justify-between items-center">
+                          <span className=" px-2 py-1 text-center w-[15%]">
+                            {u.branchCode}
+                          </span>
+                          <span className=" px-2 py-1 text-center w-[15%]">
+                            {u.personalCode}
+                          </span>
+                          <span className=" px-2 py-1 text-center w-[30%] flex justify-between items-center">
                             {userData &&
                               userData.userId === u.userId &&
                               !u.status && (

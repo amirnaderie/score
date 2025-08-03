@@ -31,6 +31,7 @@ interface ScoreRow {
   transferableScore: number;
   depositType: string;
   usedScore: UsedScore[];
+  updated_at: string;
 }
 
 interface ApiResponse {
@@ -388,8 +389,8 @@ export default function Home() {
                         کد شعبه
                       </span>
 
-                      <span className=" px-2 py-1 w-[15%] text-center">
-                        کد پرسنلی
+                      <span className=" px-2 py-1 w-[20%] text-center">
+                        پرسنلی ثبت کننده
                       </span>
 
                       <span className=" px-2 py-1 w-[30%] text-center">
@@ -411,12 +412,12 @@ export default function Home() {
                           <span className=" px-2 py-1 text-center w-[15%]">
                             {u.branchCode}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[15%]">
+                          <span className=" px-2 py-1 text-center w-[20%]">
                             {u.personalCode}
                           </span>
                           <span className=" px-2 py-1 text-center w-[30%] flex justify-between items-center">
                             {userData &&
-                              userData.userId === u.userId &&
+                              userData.branchCode === u.branchCode &&
                               !u.status && (
                                 <>
                                   <button

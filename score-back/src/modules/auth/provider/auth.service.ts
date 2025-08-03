@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as querystring from 'querystring';
@@ -9,6 +13,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/log.event';
 import { logTypes } from 'src/modules/event/enums/logType.enum';
 import { ErrorMessages } from 'src/constants/error-messages.constants';
+import handelError from 'src/utility/handel-error';
 
 @Injectable()
 export class AuthService {
@@ -59,6 +64,8 @@ export class AuthService {
     }
 
     const userData = await this.verifyToken(tokenFromSSO.data.access_token);
+    const personelData = await this.getPersonnelData(userData.username);
+
     const { cookieOptions } = await this.createOption(exp);
     response.cookie(
       'accessToken',
@@ -78,8 +85,9 @@ export class AuthService {
       message: 'Successfully signed in',
       data: {
         userId: userData.id,
-        userName: userData.username,
         roles: userData.roles,
+        branchCode: Number(personelData.branchCode),
+        personelCode: Number(userData.username),
       },
     };
   }
@@ -227,6 +235,37 @@ export class AuthService {
         );
         throw new UnauthorizedException(ErrorMessages.AUTH_FAILED);
       }
+    }
+  }
+
+  async getPersonnelData(personelCode: number) {
+    try {
+      const AFRA_URL = this.configService.get<string>('AFRA_URL');
+      const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
+      const retVal = await fetch(`${AFRA_URL}/findByCode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${AFRA_TOKEN}`,
+        },
+        body: JSON.stringify({
+          code: personelCode.toString(),
+        }),
+      });
+      const userDetailData = await retVal.json();
+      return {
+        branchCode: userDetailData.currentUnit.code,
+        branchName: userDetailData.currentUnit.name,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'score.service',
+        'getPersonnelData',
+        { personelCode },
+      );
+      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
   }
 }

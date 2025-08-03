@@ -28,12 +28,15 @@ import { GetUser } from 'src/decorators/getUser.decorator';
 import { User } from 'src/interfaces/user.interface';
 import { UseScoreDto } from './dto/use-score.dto';
 import { BankCoreProvider } from './provider/coreBank.provider';
+import { Roles } from 'src/decorators/roles.decorator';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @Controller('score')
 export class ScoreController {
-  constructor(private readonly scoreService: ScoreService,
+  constructor(
+    private readonly scoreService: ScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) { }
+  ) {}
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -89,7 +92,9 @@ export class ScoreController {
     return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
   }
 
+  //@UseGuards(AuthGuard, RolesGuard)
   @UseGuards(AuthGuard)
+  //@Roles('score.view')
   @Get(':nationalCode')
   findOneByAccountNumber(
     @Param(
@@ -147,12 +152,10 @@ export class ScoreController {
     const nationalCode = Number(useScoreDto.nationalCode);
     const accountNumber = Number(useScoreDto.accountNumber);
     const score = useScoreDto.score;
-    const ip = req.ip || req.connection.remoteAddress;
     return this.scoreService.usedScore(
       nationalCode,
       accountNumber,
       score,
-      ip,
       useScoreDto.referenceCode ?? null,
     );
   }
@@ -182,7 +185,7 @@ export class ScoreController {
     )
     usedScoreId: number,
   ) {
-    return this.scoreService.acceptUsedScoreFront(usedScoreId, user.id);
+    return this.scoreService.acceptUsedScoreFront(usedScoreId, user);
   }
   @UseGuards(AuthGuard)
   @Put('cancel-use')
@@ -198,15 +201,14 @@ export class ScoreController {
     )
     usedScoreId: number,
   ) {
-    return this.scoreService.cancleUsedScoreFront(usedScoreId, user.id);
+    return this.scoreService.cancleUsedScoreFront(usedScoreId, user);
   }
-
 
   @Get('testApi/1')
-  testApi1() {
+  testApi1(@Req() req) {
     return this.bankCoreProvider.getsessionId();
   }
-  
+
   @Get('testApi/2')
   testApi2() {
     return this.bankCoreProvider.getCustomerBriefDetail(2880501520);
@@ -214,6 +216,6 @@ export class ScoreController {
 
   @Get('testApi/3')
   testApi3() {
-    return this.bankCoreProvider.getDepositDetail(784877, ["3120106246465"]);
+    return this.bankCoreProvider.getDepositDetail(784877, ['3120106246465']);
   }
 }

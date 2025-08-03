@@ -25,13 +25,6 @@ export class UsedScore extends BaseEntity {
   score: number;
 
   @Column({
-    type: 'varchar',
-    nullable: true,
-    length: 30,
-  })
-  userId: string;
-
-  @Column({
     type: 'int',
     nullable: true,
   })

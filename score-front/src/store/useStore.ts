@@ -12,7 +12,9 @@ export const UseStore = create<allStates>()(
   persist(
     (set, get) => ({
       userData: {
-        userName: "",
+        branchCode: 0,
+        personelCode: 0,
+        roles: [''],
         userId: "",
       },
       updateUserData: (item: User | null) =>

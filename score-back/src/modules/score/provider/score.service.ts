@@ -21,13 +21,14 @@ import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { BankCoreProvider } from './coreBank.provider';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/interfaces/user.interface';
+import { AuthService } from 'src/modules/auth/provider/auth.service';
 const moment = require('moment-jalaali');
 
 @Injectable()
 export class ScoreService {
   constructor(
     private eventEmitter: EventEmitter2,
-
+    private readonly authService: AuthService,
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
     @InjectRepository(TransferScore)
@@ -91,13 +92,14 @@ export class ScoreService {
           usableScore: scoreRec[0].usableScore,
           transferableScore: scoreRec[0].transferableScore,
           depositType: '1206',
+          updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
           usedScore: usedScore.map((usedItem: UsedScore) => {
             return {
               id: usedItem.id,
               score: usedItem.score,
               createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
               updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
-              userId: usedItem.userId,
+              personaCode: usedItem.personalCode,
               status: usedItem.status,
               personalCode: usedItem.personalCode,
               branchCode: usedItem.branchCode,
@@ -171,6 +173,7 @@ export class ScoreService {
           usableScore: scoreRec[0].usableScore,
           transferableScore: scoreRec[0].transferableScore,
           depositType: '1206',
+          updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
         });
       }
 
@@ -273,8 +276,11 @@ export class ScoreService {
             message: 'ُThere is no record for given fromNationalCode',
             requestBody: JSON.stringify({
               fromNationalCode,
+              fromAccountNumber,
               toNationalCode,
+              toAccountNumber,
               score,
+              referenceCode: referenceCode ? referenceCode : null,
             }),
             stack: '',
           }),
@@ -285,10 +291,7 @@ export class ScoreService {
           error: 'Not Found',
         };
       }
-      if (
-        scoreRec[0].transferableScore! < score ||
-        scoreRec[0].maxTransferableScore! < score
-      ) {
+      if (scoreRec[0].transferableScore! < score) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
@@ -298,8 +301,11 @@ export class ScoreService {
             message: 'Insufficient score to transfer',
             requestBody: JSON.stringify({
               fromNationalCode,
+              fromAccountNumber,
               toNationalCode,
+              toAccountNumber,
               score,
+              referenceCode: referenceCode ? referenceCode : null,
             }),
             stack: '',
           }),
@@ -361,7 +367,6 @@ export class ScoreService {
     nationalCode: number,
     accountNumber: number,
     score: number,
-    userId: string,
     referenceCode: number | null,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
@@ -387,6 +392,22 @@ export class ScoreService {
           accountNumber,
         ]);
       if (depositStatus !== 'OPEN') {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'consumeScore',
+            message: 'ُthe Account is not open',
+            requestBody: JSON.stringify({
+              nationalCode,
+              accountNumber,
+              score,
+            }),
+            stack: '',
+          }),
+        );
+
         return {
           message: ErrorMessages.NOTACTIVE,
           statusCode: 400,
@@ -409,6 +430,7 @@ export class ScoreService {
           message: 'ُThere is no record for given nationalCode',
           requestBody: JSON.stringify({
             nationalCode,
+            accountNumber,
             score,
           }),
           stack: '',
@@ -421,14 +443,13 @@ export class ScoreService {
         error: 'Not Found',
       };
     }
-    return this.consumeScore(scoreRec, score, userId, '', referenceCode);
+    return this.consumeScore(scoreRec, score, 0, referenceCode);
   }
 
   async consumeScore(
     scoreRec: Partial<ScoreInterface>[] | null,
     score: number,
-    userId: string,
-    userName: string,
+    persoanleCode: number,
     referenceCode: number | null,
   ) {
     try {
@@ -442,6 +463,8 @@ export class ScoreService {
             message: 'Insufficient score to use',
             requestBody: JSON.stringify({
               scoreId: scoreRec[0]?.id,
+              persoanleCode,
+              referenceCode,
             }),
             stack: '',
           }),
@@ -455,13 +478,13 @@ export class ScoreService {
       }
       let personnelData: any = null;
 
-      if (userName) personnelData = await this.getPersonnelData(userName);
+      if (persoanleCode)
+        personnelData = await this.authService.getPersonnelData(persoanleCode);
 
       const UseScore = this.UsedScoreRepository.create({
         usedScore: { id: scoreRec[0].id },
         score: score,
-        userId,
-        personalCode: userName ? Number(userName) : null,
+        personalCode: persoanleCode ? Number(persoanleCode) : null,
         branchCode: personnelData?.branchCode
           ? Number(personnelData?.branchCode)
           : null,
@@ -516,11 +539,11 @@ export class ScoreService {
       'exec getScores @nationalCode=@0,@accountNumber=@1',
       [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
     );
+
     return this.consumeScore(
       scoreRow,
       createUseScoreDto.score,
-      user.id,
-      user.userName,
+      Number(user.userName),
       null,
     );
   }
@@ -664,14 +687,20 @@ export class ScoreService {
       statusCode: 200,
     };
   }
-  async acceptUsedScoreFront(usedScoreId: number, userId: string) {
+  async acceptUsedScoreFront(usedScoreId: number, user: User) {
     const usedScoreRec = await this.UsedScoreRepository.findOne({
       where: {
         id: usedScoreId,
       },
       //relations: ['usedScore'],
     });
-    if (!usedScoreRec || usedScoreRec.userId !== userId)
+    const userData: Partial<User> = await this.authService.getPersonnelData(
+      Number(user.userName),
+    );
+    if (
+      !usedScoreRec ||
+      usedScoreRec.branchCode !== Number(userData.branchCode)
+    )
       return {
         data: {},
         message: ErrorMessages.NOT_FOUND,
@@ -687,7 +716,7 @@ export class ScoreService {
         this.eventEmitter,
         'score.service',
         'acceptUsedScoreFront',
-        { usedScoreId, userId },
+        { usedScoreId, personalCode: userData.branchCode },
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
@@ -696,14 +725,20 @@ export class ScoreService {
       statusCode: 200,
     };
   }
-  async cancleUsedScoreFront(usedScoreId: number, userId: string) {
+  async cancleUsedScoreFront(usedScoreId: number, user: User) {
     const usedScoreRec = await this.UsedScoreRepository.findOne({
       where: {
         id: usedScoreId,
       },
       //relations: ['usedScore'],
     });
-    if (!usedScoreRec || usedScoreRec.userId !== userId)
+    const userData: Partial<User> = await this.authService.getPersonnelData(
+      Number(user.userName),
+    );
+    if (
+      !usedScoreRec ||
+      usedScoreRec.branchCode !== Number(userData.branchCode)
+    )
       return {
         data: {},
         message: ErrorMessages.NOT_FOUND,
@@ -718,7 +753,7 @@ export class ScoreService {
           logTypes: logTypes.INFO,
           fileName: 'score.service',
           method: 'cancleUsedScoreFront',
-          message: `user ${userId} deleted a usedScore `,
+          message: `personalCode:${userData.personalCode} branchCode:${user.branchCode} deleted a usedScore `,
           requestBody: JSON.stringify(usedScoreRec),
           stack: '',
         }),
@@ -729,7 +764,11 @@ export class ScoreService {
         this.eventEmitter,
         'score.service',
         'cancleUsedScoreFront',
-        { usedScoreId, userId },
+        {
+          usedScoreId,
+          personalCode: user.personalCode,
+          branchCode: user.branchCode,
+        },
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }
@@ -737,36 +776,5 @@ export class ScoreService {
       message: ErrorMessages.SUCCESSFULL,
       statusCode: 200,
     };
-  }
-
-  async getPersonnelData(personelCode: string) {
-    try {
-      const AFRA_URL = this.configService.get<string>('AFRA_URL');
-      const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
-      const retVal = await fetch(`${AFRA_URL}/findByCode`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${AFRA_TOKEN}`,
-        },
-        body: JSON.stringify({
-          code: personelCode,
-        }),
-      });
-      const userDetailData = await retVal.json();
-      return {
-        branchCode: userDetailData.currentUnit.code,
-        branchName: userDetailData.currentUnit.name,
-      };
-    } catch (error) {
-      handelError(
-        error,
-        this.eventEmitter,
-        'score.service',
-        'getPersonnelData',
-        { personelCode },
-      );
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
-    }
   }
 }

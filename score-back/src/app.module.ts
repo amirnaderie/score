@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import typeormConfig from './config/typeorm.config';
 import { DynamicThrottleGuard } from './guards/dynamic-throttle.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './guards/roles.guard';
 import { EventModule } from './modules/event/event.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module';

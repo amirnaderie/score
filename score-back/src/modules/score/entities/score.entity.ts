@@ -45,18 +45,18 @@ export class Score extends BaseEntity {
 
   @Column({
     type: 'varchar',
-    nullable: false,
+    nullable: true,
     length: 8,
   })
   openDate: string;
 
   @Column({
-    name: 'started_at',
+    name: 'updated_at',
     type: 'datetime2',
     precision: 0,
     select: true,
     nullable: true,
    
   })
-  startDate: Date;
+  updatedAt: Date;
 }

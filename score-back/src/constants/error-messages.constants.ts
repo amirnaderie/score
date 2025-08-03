@@ -14,5 +14,6 @@ export const ErrorMessages = {
   INSUFFICIENT_SCORE: 'امتیاز کافی نیست',
   SUCCESSFULL: 'عملیات با موفقیت انجام پذیرفت',
   NOTACTIVE: 'حساب فعال نیست',
-  OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است'
+  OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است',
+  FORBIDDEN: 'عدم مجوز دسترسی',
 };

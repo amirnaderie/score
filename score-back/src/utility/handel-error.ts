@@ -1,4 +1,4 @@
-import { HttpException } from '@nestjs/common';
+import { HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/log.event';
 import { logTypes } from 'src/modules/event/enums/logType.enum';
@@ -25,5 +25,10 @@ export default function handelError(
       stack: (error as Error).stack,
     }),
   );
-  throw new Error(ErrorMessages.INTERNAL_ERROR);
+  throw new InternalServerErrorException({
+    data: {},
+    message: ErrorMessages.INTERNAL_ERROR,
+    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+  });
+
 }

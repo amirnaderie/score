@@ -8,8 +8,9 @@ export const handleInput = (e: any, maxLength: number) => {
 };
 
 export const generateToken = (length: number): string => {
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = "";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -24,7 +25,7 @@ export const validateIranianNationalCode = (nationalCode: number) => {
   }
 
   // Convert to string and remove any spaces or dashes
-  const code = nationalCode.toString().replace(/[\s-]/g, "").padStart(10, '0');
+  const code = nationalCode.toString().replace(/[\s-]/g, "").padStart(10, "0");
 
   // Check if it's exactly 10 digits
   if (!/^\d{10}$/.test(code)) {
@@ -69,11 +70,14 @@ export const validateIranianNationalCode = (nationalCode: number) => {
   }
 };
 
+// Format number with thousands separator
+export const formatNumber = (value: string) => {
+  if (!value) return "";
+  // Remove all non-digit characters
+  const digits = value.replace(/\D/g, "");
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
 
-  // Format number with thousands separator
-  export const formatNumber = (value: string) => {
-    if (!value) return "";
-    // Remove all non-digit characters
-    const digits = value.replace(/\D/g, "");
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
+export const hasAccess = (roles: string[], requiredRoles: string[]) => {
+  return roles.some((role) => requiredRoles.includes(role));
+};

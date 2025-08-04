@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   UseGuards,
   Query,
@@ -11,10 +10,8 @@ import {
   BadRequestException,
   HttpCode,
   Req,
-  ValidationPipe,
-  Injectable,
-  Module,
   Put,
+  Delete,
 } from '@nestjs/common';
 
 import { ScoreService } from './provider/score.service';
@@ -36,7 +33,7 @@ export class ScoreController {
   constructor(
     private readonly scoreService: ScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) {}
+  ) { }
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -92,11 +89,10 @@ export class ScoreController {
     return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
   }
 
-  //@UseGuards(AuthGuard, RolesGuard)
-  @UseGuards(AuthGuard)
-  //@Roles('score.view')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.view', 'score.confirm', 'score.branch')
   @Get(':nationalCode')
-  findOneByAccountNumber(
+  findByNationalCodeForFront(
     @Param(
       'nationalCode',
       new ParseIntPipe({
@@ -160,18 +156,49 @@ export class ScoreController {
     );
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(ApiKeyGuard)
+  @Put('acceptUse')
+  acceptUsedScore(
+    @Body(
+      'referenceCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    referenceCode: number,
+  ) {
+    return this.scoreService.acceptUsedScore(referenceCode);
+  }
+
+  @UseGuards(ApiKeyGuard)
+  @Delete('cancelUse')
+  cancleUsedScore(
+    @Body(
+      'referenceCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    referenceCode: number,
+  ) {
+    return this.scoreService.cancleUsedScore(referenceCode);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm', 'score.branch')
   @Post('consume')
   @HttpCode(200)
   usedScoreForFront(
     @GetUser() user: User,
     @Body() createUseScoreDto: CreateUseScoreDto,
-    @Req() req,
   ) {
-    const ip = req.ip || req.connection.remoteAddress;
-    return this.scoreService.usedScoreForFront(createUseScoreDto, user, ip);
+    return this.scoreService.usedScoreForFront(createUseScoreDto, user);
   }
-  @UseGuards(AuthGuard)
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm', 'score.branch')
   @Put('accept-use')
   @HttpCode(200)
   acceptUsedScoreFront(
@@ -187,8 +214,10 @@ export class ScoreController {
   ) {
     return this.scoreService.acceptUsedScoreFront(usedScoreId, user);
   }
-  @UseGuards(AuthGuard)
-  @Put('cancel-use')
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm', 'score.branch')
+  @Delete('cancel-use')
   @HttpCode(200)
   cancleUsedScoreFront(
     @GetUser() user: User,

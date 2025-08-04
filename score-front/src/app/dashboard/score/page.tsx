@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ConfirmModal from "@/app/components/ConfirmModal";
 
 import toast from "react-hot-toast";
@@ -7,6 +7,7 @@ import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 import {
   formatNumber,
   handleInput,
+  hasAccess,
   validateIranianNationalCode,
 } from "@/app/lib/utility";
 import { fetchWithAuthClient } from "@/app/lib/fetchWithAuthClient";
@@ -170,7 +171,7 @@ export default function Home() {
           const res = await fetchWithAuthClient(
             `${process.env.NEXT_PUBLIC_API_URL}/score/cancel-use`,
             {
-              method: "PUT",
+              method: "DELETE",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ usedScoreId: id }),
               credentials: "include",
@@ -300,7 +301,12 @@ export default function Home() {
                 <span className=" px-3 py-2 w-[25%] text-center">
                   میزان استفاده
                 </span>
-                <span className=" px-3 py-2 w-[10%] text-center">عملیات</span>
+                {hasAccess(userData?.roles || [], [
+                  "score.confirm",
+                  "score.branch",
+                ]) && (
+                  <span className=" px-3 py-2 w-[10%] text-center">عملیات</span>
+                )}
               </div>
 
               <div className="w-full max-h-[150px] overflow-auto pb-5">
@@ -340,25 +346,30 @@ export default function Home() {
                         onInput={(e) => handleInput(e, 11)}
                       />
                     </span>
-                    <span className=" px-3 py-2 w-[10%] text-sm">
-                      <button
-                        className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                        disabled={
-                          saving[row.accountNumber] ||
-                          !consumeScores[row.accountNumber]
-                        }
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSaveConsume(row.accountNumber);
-                        }}
-                      >
-                        {saving[row.accountNumber] ? (
-                          <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                        ) : (
-                          "ثبت"
-                        )}
-                      </button>
-                    </span>
+                    {hasAccess(userData?.roles || [], [
+                      "score.confirm",
+                      "score.branch",
+                    ]) && (
+                      <span className=" px-3 py-2 w-[10%] text-sm">
+                        <button
+                          className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                          disabled={
+                            saving[row.accountNumber] ||
+                            !consumeScores[row.accountNumber]
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveConsume(row.accountNumber);
+                          }}
+                        >
+                          {saving[row.accountNumber] ? (
+                            <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                          ) : (
+                            "ثبت"
+                          )}
+                        </button>
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -393,15 +404,20 @@ export default function Home() {
                         پرسنلی ثبت کننده
                       </span>
 
-                      <span className=" px-2 py-1 w-[30%] text-center">
-                        عملیات
-                      </span>
+                      {hasAccess(userData?.roles || [], [
+                        "score.confirm",
+                        "score.branch",
+                      ]) && (
+                        <span className=" px-2 py-1 w-[30%] text-center">
+                          عملیات
+                        </span>
+                      )}
                     </div>
                     <div className=" max-h-[270px] w-full overflow-y-auto">
                       {data[selectedIndex].usedScore.map((u: UsedScore) => (
                         <div
                           key={u.id}
-                          className="w-full flex  h-12 odd:bg-gray-100 even:bg-gray-200 items-center justify-center"
+                          className="w-full flex  h-12 odd:bg-gray-100 even:bg-gray-200 items-center justify-start"
                         >
                           <span className=" px-2 py-1 text-center w-[25%]">
                             {Number(u.score).toLocaleString()}
@@ -415,48 +431,53 @@ export default function Home() {
                           <span className=" px-2 py-1 text-center w-[20%]">
                             {u.personalCode}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[30%] flex justify-between items-center">
-                            {userData &&
-                              userData.branchCode === u.branchCode &&
-                              !u.status && (
-                                <>
-                                  <button
-                                    className="bg-green-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                                    // disabled={
-                                    //   saving[row.accountNumber] ||
-                                    //   !consumeScores[row.accountNumber]
-                                    // }
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      acceptUse(u.id);
-                                    }}
-                                  >
-                                    {saveUse[u.id] ? (
-                                      <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                                    ) : (
-                                      "ثبت نهایی"
-                                    )}
-                                  </button>
-                                  <button
-                                    className="bg-red-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                                    // disabled={
-                                    //   saving[row.accountNumber] ||
-                                    //   !consumeScores[row.accountNumber]
-                                    // }
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      cancelUse(u.id);
-                                    }}
-                                  >
-                                    {calcleUse[u.id] ? (
-                                      <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                                    ) : (
-                                      "لغو"
-                                    )}
-                                  </button>
-                                </>
-                              )}
-                          </span>
+                          {hasAccess(userData?.roles || [], [
+                            "score.confirm",
+                            "score.branch",
+                          ]) && (
+                            <span className=" px-2 py-1 text-center w-[30%] flex justify-between items-center">
+                              {userData &&
+                                userData.branchCode === u.branchCode &&
+                                !u.status && (
+                                  <>
+                                    <button
+                                      className="bg-green-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                      // disabled={
+                                      //   saving[row.accountNumber] ||
+                                      //   !consumeScores[row.accountNumber]
+                                      // }
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        acceptUse(u.id);
+                                      }}
+                                    >
+                                      {saveUse[u.id] ? (
+                                        <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                                      ) : (
+                                        "ثبت نهایی"
+                                      )}
+                                    </button>
+                                    <button
+                                      className="bg-red-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                      // disabled={
+                                      //   saving[row.accountNumber] ||
+                                      //   !consumeScores[row.accountNumber]
+                                      // }
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        cancelUse(u.id);
+                                      }}
+                                    >
+                                      {calcleUse[u.id] ? (
+                                        <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                                      ) : (
+                                        "لغو"
+                                      )}
+                                    </button>
+                                  </>
+                                )}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -1,10 +1,9 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
-  RequestTimeoutException,
-  Req,
+  HttpStatus,
+  ConflictException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
@@ -37,7 +36,7 @@ export class ScoreService {
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: Partial<Score>[] | null;
@@ -59,18 +58,18 @@ export class ScoreService {
           new LogEvent({
             logTypes: logTypes.INFO,
             fileName: 'score.service',
-            method: 'findOneByNationalCode',
+            method: 'findByNationalCodeForFront',
             message: 'ُThere is no record for given nationalCode',
             requestBody: JSON.stringify({ nationalCode: nationalCode }),
             stack: '',
           }),
         );
-        return {
+        throw new NotFoundException({
           data: [],
           message: ErrorMessages.NOT_FOUND,
-          statusCode: 404,
+          statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
-        };
+        });
         // throw new NotFoundException(ErrorMessages.NOT_FOUND);
       }
       for (const score of scoresOfNationalCode) {
@@ -113,7 +112,7 @@ export class ScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch (error) {}
+      } catch (error) { }
       return {
         data: {
           scoresRec,
@@ -127,7 +126,7 @@ export class ScoreService {
         error,
         this.eventEmitter,
         'score.service',
-        'findOneByNationalCode',
+        'findByNationalCodeForFront',
         { nationalCode: nationalCode },
       );
     }
@@ -155,12 +154,12 @@ export class ScoreService {
             stack: '',
           }),
         );
-        return {
+        throw new NotFoundException({
           data: [],
           message: ErrorMessages.NOT_FOUND,
-          statusCode: 404,
+          statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
-        };
+        });
         // throw new NotFoundException(ErrorMessages.NOT_FOUND);
       }
       for (const score of scoresOfNationalCode) {
@@ -208,22 +207,34 @@ export class ScoreService {
       if (
         score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
       ) {
-        return {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'transferScore',
+            message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
+            requestBody: JSON.stringify({ fromNationalCode, fromAccountNumber, score, MAX_TRANSFERABLE_SCORE: this.configService.get<string>('MAX_TRANSFERABLE_SCORE') }),
+            stack: '',
+          }),
+        );
+        throw new BadRequestException({
           message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
-          statusCode: 400,
+          statusCode: HttpStatus.BAD_REQUEST,
           error: 'Bad Request',
-        };
+        });
       }
 
       if (
         fromNationalCode === toNationalCode ||
         fromAccountNumber === toAccountNumber
       ) {
-        return {
+        throw new BadRequestException({
           message: ErrorMessages.VALIDATE_INFO_FAILED,
-          statusCode: 400,
+          statusCode: HttpStatus.BAD_REQUEST,
           error: 'Bad Request',
-        };
+        });
+
       }
 
       try {
@@ -240,13 +251,25 @@ export class ScoreService {
             toAccountNumber,
           ]);
         if (depositStatusFrom !== 'OPEN' || depositStatusTo !== 'OPEN') {
-          return {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `fromAccountNumber or toAccountNumber is close`,
+              requestBody: JSON.stringify({ fromAccountNumber, toAccountNumber }),
+              stack: '',
+            }),
+          );
+
+          throw new BadRequestException({
             message: ErrorMessages.NOTACTIVE,
-            statusCode: 400,
-            error: 'Bad Redquest ',
-          };
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
         }
-      } catch (error) {}
+      } catch (error) { }
 
       if (referenceCode) {
         const foundReferenceCode = await this.TransferScoreRepository.findOne({
@@ -255,11 +278,11 @@ export class ScoreService {
           },
         });
         if (foundReferenceCode)
-          return {
+          throw new ConflictException({
             message: ErrorMessages.REPETITIVE_INFO_FAILED,
-            statusCode: 409,
-            error: 'Conflict ',
-          };
+            statusCode: HttpStatus.CONFLICT,
+            error: 'Conflict',
+          });
       }
 
       scoreRec = await this.scoreRepository.query(
@@ -273,7 +296,7 @@ export class ScoreService {
             logTypes: logTypes.INFO,
             fileName: 'score.service',
             method: 'transferScore',
-            message: 'ُThere is no record for given fromNationalCode',
+            message: 'ُThere is no record for given fromNationalCode and fromAccountNumber',
             requestBody: JSON.stringify({
               fromNationalCode,
               fromAccountNumber,
@@ -285,11 +308,12 @@ export class ScoreService {
             stack: '',
           }),
         );
-        return {
+        throw new NotFoundException({
           message: ErrorMessages.SENDER_NOT_FOUND,
-          statusCode: 404,
+          statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
-        };
+        });
+
       }
       if (scoreRec[0].transferableScore! < score) {
         this.eventEmitter.emit(
@@ -310,11 +334,12 @@ export class ScoreService {
             stack: '',
           }),
         );
-        return {
+        throw new BadRequestException({
           message: ErrorMessages.INSUFFICIENT_SCORE,
-          statusCode: 402,
-          error: 'INSUFFICIENT SCORE',
-        };
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+
       }
       const toRec = await this.scoreRepository.findOne({
         where: {
@@ -329,20 +354,20 @@ export class ScoreService {
             logTypes: logTypes.INFO,
             fileName: 'score.service',
             method: 'transferScore',
-            message: 'ُThere is no record for given toNationalCode',
+            message: 'ُThere is no record for given toNationalCode and toAccountNumber',
             requestBody: JSON.stringify({
-              fromNationalCode,
               toNationalCode,
+              toAccountNumber,
               score,
             }),
             stack: '',
           }),
         );
-        return {
+        throw new NotFoundException({
           message: ErrorMessages.RECIEVER_NOT_FOUND,
-          statusCode: 404,
+          statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
-        };
+        });
       }
 
       const TransferScore = this.TransferScoreRepository.create({
@@ -378,11 +403,11 @@ export class ScoreService {
         },
       });
       if (foundReferenceCode)
-        return {
+        throw new ConflictException({
           message: ErrorMessages.REPETITIVE_INFO_FAILED,
-          statusCode: 409,
+          statusCode: HttpStatus.CONFLICT,
           error: 'Conflict',
-        };
+        });
     }
     try {
       const scoreOwner =
@@ -407,14 +432,14 @@ export class ScoreService {
             stack: '',
           }),
         );
-
-        return {
+        throw new BadRequestException({
           message: ErrorMessages.NOTACTIVE,
-          statusCode: 400,
-          error: 'Bad Redquest ',
-        };
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+
       }
-    } catch (error) {}
+    } catch (error) { }
 
     scoreRec = await this.scoreRepository.query(
       'exec getScores @nationalCode=@0,@accountNumber=@1',
@@ -427,7 +452,7 @@ export class ScoreService {
           logTypes: logTypes.INFO,
           fileName: 'score.service',
           method: 'consumeScore',
-          message: 'ُThere is no record for given nationalCode',
+          message: 'ُThere is no record for given nationalCode and accountNumber',
           requestBody: JSON.stringify({
             nationalCode,
             accountNumber,
@@ -437,11 +462,12 @@ export class ScoreService {
         }),
       );
       //throw new NotFoundException(ErrorMessages.NOT_FOUND);
-      return {
+      throw new NotFoundException({
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
+
     }
     return this.consumeScore(scoreRec, score, 0, referenceCode);
   }
@@ -469,11 +495,12 @@ export class ScoreService {
             stack: '',
           }),
         );
-        return {
+        throw new BadRequestException({
           message: ErrorMessages.INSUFFICIENT_SCORE,
-          statusCode: 402,
-          error: 'INSUFFICIENT SCORE',
-        };
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+
         //throw new BadRequestException(ErrorMessages.INSUFFICIENT_SCORE);
       }
       let personnelData: any = null;
@@ -505,7 +532,6 @@ export class ScoreService {
   public async usedScoreForFront(
     createUseScoreDto: CreateUseScoreDto,
     user: User,
-    ip: string,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
     scoreRec = await this.scoreRepository.findBy({
@@ -518,22 +544,22 @@ export class ScoreService {
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'score.service',
-          method: 'consumeScore',
+          method: 'usedScoreForFront',
           message: 'ُThere is no record for given nationalCode',
           requestBody: JSON.stringify({
             scoreId: createUseScoreDto.scoreId,
             user,
-            ip,
           }),
           stack: '',
         }),
       );
       //throw new NotFoundException(ErrorMessages.NOT_FOUND);
-      return {
+      throw new NotFoundException({
+        data: [],
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
     }
     const scoreRow = await this.scoreRepository.query(
       'exec getScores @nationalCode=@0,@accountNumber=@1',
@@ -559,11 +585,13 @@ export class ScoreService {
       },
     });
     if (!coresRec)
-      return {
+      throw new NotFoundException({
+        data: [],
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
+
     const TransferScoreRec = await this.TransferScoreRepository.find({
       where: {
         fromScore: { id: coresRec.id },
@@ -588,6 +616,7 @@ export class ScoreService {
       statusCode: 200,
     };
   }
+
   async getTransferScoreTo(
     fromNationalCode: number,
     fromAccountNumber: number,
@@ -599,11 +628,12 @@ export class ScoreService {
       },
     });
     if (!coresRec)
-      return {
+      throw new NotFoundException({
+        data: [],
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
     const TransferScoreRec = await this.TransferScoreRepository.find({
       where: {
         toScore: { id: coresRec.id },
@@ -637,12 +667,12 @@ export class ScoreService {
       relations: ['fromScore', 'toScore'],
     });
     if (!TransferScoreRec)
-      return {
+      throw new NotFoundException({
         data: {},
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
 
     const data = {
       score: TransferScoreRec.score,
@@ -667,19 +697,20 @@ export class ScoreService {
       relations: ['usedScore'],
     });
     if (!usedScoreRec)
-      return {
+      throw new NotFoundException({
         data: {},
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
 
     const data = {
       score: usedScoreRec.score,
       accountNumber: usedScoreRec.usedScore.accountNumber,
       nationalCode: usedScoreRec.usedScore.nationalCode,
       referenceCode: usedScoreRec.referenceCode,
-      createdAt: moment(usedScoreRec.createdAt).format('jYYYY/jMM/jDD'),
+      createdAt: moment(usedScoreRec.updatedAt).format('jYYYY/jMM/jDD'),
+      status: usedScoreRec.status,
     };
     return {
       data,
@@ -687,12 +718,12 @@ export class ScoreService {
       statusCode: 200,
     };
   }
+
   async acceptUsedScoreFront(usedScoreId: number, user: User) {
     const usedScoreRec = await this.UsedScoreRepository.findOne({
       where: {
         id: usedScoreId,
       },
-      //relations: ['usedScore'],
     });
     const userData: Partial<User> = await this.authService.getPersonnelData(
       Number(user.userName),
@@ -701,12 +732,12 @@ export class ScoreService {
       !usedScoreRec ||
       usedScoreRec.branchCode !== Number(userData.branchCode)
     )
-      return {
-        data: {},
+      throw new NotFoundException({
+        data: [],
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
     usedScoreRec.status = true;
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
@@ -718,7 +749,47 @@ export class ScoreService {
         'acceptUsedScoreFront',
         { usedScoreId, personalCode: userData.branchCode },
       );
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+    }
+    return {
+      message: ErrorMessages.SUCCESSFULL,
+      statusCode: 200,
+    };
+  }
+  async acceptUsedScore(referenceCode: number) {
+    const usedScoreRec = await this.UsedScoreRepository.findOne({
+      where: {
+        referenceCode,
+      },
+    });
+
+    if (
+      !usedScoreRec ||
+      usedScoreRec.branchCode
+    )
+      throw new NotFoundException({
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+
+    if (usedScoreRec.status)
+      throw new BadRequestException({
+        message: ErrorMessages.VALIDATE_INFO_FAILED,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    usedScoreRec.status = true;
+    usedScoreRec.updatedAt = new Date();
+    try {
+      await this.UsedScoreRepository.save(usedScoreRec);
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'score.service',
+        'acceptUsedScore',
+        { referenceCode },
+      );
     }
     return {
       message: ErrorMessages.SUCCESSFULL,
@@ -739,12 +810,12 @@ export class ScoreService {
       !usedScoreRec ||
       usedScoreRec.branchCode !== Number(userData.branchCode)
     )
-      return {
+      throw new NotFoundException({
         data: {},
         message: ErrorMessages.NOT_FOUND,
-        statusCode: 404,
+        statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-      };
+      });
     try {
       await this.UsedScoreRepository.delete(usedScoreRec.id);
       this.eventEmitter.emit(
@@ -770,7 +841,52 @@ export class ScoreService {
           branchCode: user.branchCode,
         },
       );
-      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+    }
+    return {
+      message: ErrorMessages.SUCCESSFULL,
+      statusCode: 200,
+    };
+  }
+  async cancleUsedScore(referenceCode: number) {
+    const usedScoreRec = await this.UsedScoreRepository.findOne({
+      where: {
+        referenceCode: referenceCode,
+      },
+    });
+
+    if (
+      !usedScoreRec ||
+      usedScoreRec.branchCode
+      || usedScoreRec.status
+    )
+      throw new NotFoundException({
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+    try {
+      await this.UsedScoreRepository.delete(usedScoreRec.id);
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'cancleUsedScoreFront',
+          message: `Api deleted a usedScore `,
+          requestBody: JSON.stringify(referenceCode),
+          stack: '',
+        }),
+      );
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'score.service',
+        'cancleUsedScore',
+        {
+          referenceCode
+        },
+      );
     }
     return {
       message: ErrorMessages.SUCCESSFULL,

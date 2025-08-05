@@ -23,7 +23,6 @@ export class EventHandler {
       message,
       method,
       stack,
-      lineNumber,
       requestBody,
     } = logParams;
     try {
@@ -33,7 +32,6 @@ export class EventHandler {
         message,
         method,
         stack,
-        lineNumber,
         requestBody,
       });
       await this.LogRepository.save(logData);

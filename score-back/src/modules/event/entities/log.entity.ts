@@ -58,14 +58,9 @@ export class Logs {
   createdAt: Date;
 
   @Column({
-    type: 'int',
+    type: 'nvarchar',
+    length: '200',
     nullable: true,
   })
-  lineNumber: number;
-
-  @Column({
-    type: 'int',
-    nullable: true,
-  })
-  userId: number;
+  user: string;
 }

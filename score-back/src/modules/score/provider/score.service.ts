@@ -601,10 +601,8 @@ export class ScoreService {
 
     const data = TransferScoreRec.map((ts) => ({
       score: ts.score,
-
       fromAccountNumber: ts.fromScore.accountNumber,
       fromNationalCode: ts.fromScore.nationalCode,
-
       toAccountNumber: ts.toScore.accountNumber,
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
@@ -643,10 +641,8 @@ export class ScoreService {
 
     const data = TransferScoreRec.map((ts) => ({
       score: ts.score,
-
       fromAccountNumber: ts.fromScore.accountNumber,
       fromNationalCode: ts.fromScore.nationalCode,
-
       toAccountNumber: ts.toScore.accountNumber,
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
@@ -741,6 +737,16 @@ export class ScoreService {
     usedScoreRec.status = true;
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'acceptUsedScore',
+          message: `user Accepted usedScore`,
+          requestBody: JSON.stringify({ usedScoreRec, user }),
+          stack: '',
+        }),)
     } catch (error) {
       handelError(
         error,
@@ -782,6 +788,17 @@ export class ScoreService {
     usedScoreRec.updatedAt = new Date();
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'acceptUsedScore',
+          message: `API Accepted usedScore`,
+          requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
+          stack: '',
+        }),
+      );
     } catch (error) {
       handelError(
         error,
@@ -825,7 +842,7 @@ export class ScoreService {
           fileName: 'score.service',
           method: 'cancleUsedScoreFront',
           message: `personalCode:${userData.personalCode} branchCode:${user.branchCode} deleted a usedScore `,
-          requestBody: JSON.stringify(usedScoreRec),
+          requestBody: JSON.stringify({ usedScoreRec, user }),
           stack: '',
         }),
       );
@@ -873,7 +890,7 @@ export class ScoreService {
           fileName: 'score.service',
           method: 'cancleUsedScoreFront',
           message: `Api deleted a usedScore `,
-          requestBody: JSON.stringify(referenceCode),
+          requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
           stack: '',
         }),
       );

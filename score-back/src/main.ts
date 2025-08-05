@@ -8,7 +8,7 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService>(ConfigService);
-  const appPort = config.get<number>('APP_PORT') || 5003;
+  const appPort = config.get<number>('APP_PORT') || 5004;
   const CORS_ORIGINS = config.get<string>('CORS_ORIGINS');
 
   const corsOptions = {

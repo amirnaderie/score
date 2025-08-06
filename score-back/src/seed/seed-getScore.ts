@@ -6,31 +6,30 @@ export async function seedGetScoreProcedure(dataSource: DataSource) {
       DROP PROCEDURE getScores;
     GO
     CREATE PROCEDURE [dbo].[getScores] 
+	@accountNumber bigint,
 	@nationalCode bigint,
-	@accountNumber bigint
-    AS
-    BEGIN
-	 SET NOCOUNT ON;
-	 declare @hisScoreId int
-	 declare @calculated int
-     declare @transferedToHim int
-	 declare @transferedFromHim int
-	 declare @usedByHim int
+	@expirationMonth int=18,
+	@currentDate int=0
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
 
-	 select @hisScoreId=id,@calculated=ISNULL(score,0) from Scores where nationalCode=@nationalCode and accountNumber=@accountNumber
-	 if(@hisScoreId>0)
-	   begin
-	     set @transferedToHim=(select ISNULL(sum(score),0) from [dbo].[TransferScores] where toScoreId=@hisScoreId)
-	 
-	     set @transferedFromHim=(select ISNULL(sum(score),0) from [dbo].[TransferScores] where fromScoreId=@hisScoreId)
-	
-	     set @usedByHim=(select ISNULL(sum(score),0) from [dbo].[UsedScores] where scoreId=@hisScoreId)
-	
-	     select id=@hisScoreId,usableScore=(@calculated+@transferedToHim-@transferedFromHim-@usedByHim),transferableScore=(iif(@calculated-@transferedFromHim-@usedByHim>0,@calculated-@transferedFromHim-@usedByHim,0)),maxTransferableScore=5000
-       end
-	 else
-	     select id=@hisScoreId,usableScore=0,transferableScore=0,maxTransferableScore=0
-   END
+   select S.id,s.accountNumber,s.nationalCode,s.score,s.updated_at,Us.usedScore,GOTTS.gotScore,GIVETS.giveScore,(s.score-Us.usedScore+GOTTS.gotScore-GIVETS.giveScore) as remainScore from [dbo].[Scores] S
+cross apply (
+  select sum(score) as usedScore from [dbo].[UsedScores] where scoreId=s.id group by scoreId
+) US
+cross apply (
+  select sum(score) as gotScore from [dbo].[TransferScores] where toScoreId=s.id group by toScoreId
+) GOTTS
+cross apply (
+  select sum(score) as giveScore from [dbo].[TransferScores] where fromScoreId=s.id group by fromScoreId
+) GIVETS
+where S.accountNumber=@accountNumber and nationalCode=@nationalCode and S.updated_at>=dbo.[ShamsiToGregorian]([dbo].[SubtractMonthsFromShamsi] (iif(@currentDate=0,FORMAT(GETDATE(), 'yyyyMMdd', 'fa'),@currentDate),18))
+
+END
+
   `);
   console.log('Seeded stored procedure: getScore');
 }

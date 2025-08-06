@@ -2,7 +2,7 @@ import { BaseEntity, Column, Entity, Index, OneToMany } from 'typeorm';
 import { TransferScore } from './transfer-score.entity';
 import { UsedScore } from './used-score.entity';
 
-@Index('IX_Scores_nationalCode_accountNumber', ['nationalCode', 'accountNumber']) // 👈 Composite index here
+@Index('IX_Scores_nationalCode_accountNumber', ['nationalCode', 'accountNumber','updatedAt']) // 👈 Composite index here
 @Entity('Scores')
 export class Score extends BaseEntity {
   @Column({
@@ -42,13 +42,6 @@ export class Score extends BaseEntity {
 
   @OneToMany(() => UsedScore, (usedScore) => usedScore.usedScore)
   usedScore: UsedScore[];
-
-  @Column({
-    type: 'varchar',
-    nullable: true,
-    length: 8,
-  })
-  openDate: string;
 
   @Column({
     name: 'updated_at',

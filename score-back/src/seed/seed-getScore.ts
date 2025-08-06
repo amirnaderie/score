@@ -16,7 +16,7 @@ BEGIN
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
 
-   select S.id,s.accountNumber,s.nationalCode,s.score,s.updated_at,Us.usedScore,GOTTS.gotScore,GIVETS.giveScore,(s.score-Us.usedScore+GOTTS.gotScore-GIVETS.giveScore) as remainScore from [dbo].[Scores] S
+   select S.id,s.accountNumber,s.nationalCode,s.score,s.updated_at,Us.usedScore,GOTTS.gotScore,GIVETS.giveScore,(s.score-Us.usedScore+GOTTS.gotScore-GIVETS.giveScore) as usableScore,(s.score-Us.usedScore-GIVETS.giveScore) as transferableScore from [dbo].[Scores] S
 cross apply (
   select sum(score) as usedScore from [dbo].[UsedScores] where scoreId=s.id group by scoreId
 ) US
@@ -31,7 +31,7 @@ where S.accountNumber=@accountNumber and nationalCode=@nationalCode and S.update
 END
 
   `);
-  console.log('Seeded stored procedure: getScore');
+  console.log('Seeded stored procedure: getScores');
 }
 
 // To run this seed, use a script or CLI command that imports and executes this function with your DataSource instance.

@@ -11,7 +11,7 @@ import { FrontScoreController } from './controllers/front-score.controller';
 import { APIScoreController } from './controllers/api-score.controller';
 import { FrontScoreService } from './provider/front-score.service';
 import { ApiScoreService } from './provider/api-score.service';
-import { ConsumeScoreProvider } from './provider/consume-score.provider';
+import { SharedProvider } from './provider/shared.provider';
 
 @Module({
   imports: [
@@ -22,6 +22,11 @@ import { ConsumeScoreProvider } from './provider/consume-score.provider';
     CacheModule.register(),
   ],
   controllers: [FrontScoreController, APIScoreController],
-  providers: [FrontScoreService, ApiScoreService, BankCoreProvider, ConsumeScoreProvider],
+  providers: [
+    FrontScoreService,
+    ApiScoreService,
+    BankCoreProvider,
+    SharedProvider,
+  ],
 })
 export class ScoreModule {}

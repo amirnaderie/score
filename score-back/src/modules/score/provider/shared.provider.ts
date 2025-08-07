@@ -11,7 +11,7 @@ import handelError from '../../../utility/handel-error';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 
 @Injectable()
-export class ConsumeScoreProvider {
+export class SharedProvider {
   constructor(
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,

@@ -8,13 +8,12 @@ import { logTypes } from '../../../modules/event/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { UsedScore } from '../entities/used-score.entity';
-import { ScoreInterface } from '../interfaces/score.interface';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { BankCoreProvider } from './coreBank.provider';
 import { User } from 'src/interfaces/user.interface';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
-import { ConsumeScoreProvider } from './consume-score.provider';
 import moment from 'moment-jalaali';
+import { SharedProvider } from './shared.provider';
 
 @Injectable()
 export class FrontScoreService {
@@ -26,7 +25,7 @@ export class FrontScoreService {
     @InjectRepository(UsedScore)
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
-    private readonly consumeScoreProvider: ConsumeScoreProvider,
+    private readonly sharedProvider: SharedProvider,
   ) {}
 
   public async findByNationalCodeForFront(nationalCode: number) {
@@ -157,7 +156,7 @@ export class FrontScoreService {
       [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
     );
 
-    return this.consumeScoreProvider.consumeScore(
+    return this.sharedProvider.consumeScore(
       scoreRow,
       createUseScoreDto.score,
       Number(user.userName),

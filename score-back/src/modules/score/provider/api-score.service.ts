@@ -19,7 +19,7 @@ import { ScoreInterface } from '../interfaces/score.interface';
 import { BankCoreProvider } from './coreBank.provider';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
-import { ConsumeScoreProvider } from './consume-score.provider';
+import { SharedProvider } from './shared.provider';
 const moment = require('moment-jalaali');
 
 @Injectable()
@@ -35,7 +35,7 @@ export class ApiScoreService {
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
-    private readonly consumeScoreProvider: ConsumeScoreProvider,
+    private readonly sharedProvider: SharedProvider,
   ) {}
 
   public async findByNationalCode(nationalCode: number) {
@@ -384,12 +384,7 @@ export class ApiScoreService {
       });
     }
 
-    return this.consumeScoreProvider.consumeScore(
-      scoreRec,
-      score,
-      0,
-      referenceCode,
-    );
+    return this.sharedProvider.consumeScore(scoreRec, score, 0, referenceCode);
   }
 
   async getTransferScoreFrom(

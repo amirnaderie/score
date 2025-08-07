@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScoreService } from './provider/score.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Score } from './entities/score.entity';
 import { TransferScore } from './entities/transfer-score.entity';
@@ -8,8 +7,11 @@ import { EventModule } from '../event/event.module';
 import { AuthModule } from '../auth/auth.module';
 import { BankCoreProvider } from './provider/coreBank.provider';
 import { CacheModule } from '@nestjs/cache-manager';
-import { FrontScoreController } from './controllers/frontScore.controller';
-import { APIScoreController } from './controllers/apiScore.controller';
+import { FrontScoreController } from './controllers/front-score.controller';
+import { APIScoreController } from './controllers/api-score.controller';
+import { FrontScoreService } from './provider/front-score.service';
+import { ApiScoreService } from './provider/api-score.service';
+import { ConsumeScoreProvider } from './provider/consume-score.provider';
 
 @Module({
   imports: [
@@ -20,6 +22,6 @@ import { APIScoreController } from './controllers/apiScore.controller';
     CacheModule.register(),
   ],
   controllers: [FrontScoreController, APIScoreController],
-  providers: [ScoreService, BankCoreProvider],
+  providers: [FrontScoreService, ApiScoreService, BankCoreProvider, ConsumeScoreProvider],
 })
 export class ScoreModule {}

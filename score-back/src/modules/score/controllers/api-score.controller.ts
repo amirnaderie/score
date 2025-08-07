@@ -14,17 +14,17 @@ import {
   Delete,
 } from '@nestjs/common';
 import { BankCoreProvider } from '../provider/coreBank.provider';
-import { ScoreService } from '../provider/score.service';
 import { ApiKeyGuard } from 'src/guards/api-key.guard';
 import { GetTransferScoreDto } from '../dto/get-transfer-score.dto';
 import { ErrorMessages } from 'src/constants/error-messages.constants';
 import { TransferScoreDto } from '../dto/transfer-score.dto';
 import { UseScoreDto } from '../dto/use-score.dto';
+import { ApiScoreService } from '../provider/api-score.service';
 
 @Controller('score')
 export class APIScoreController {
   constructor(
-    private readonly scoreService: ScoreService,
+    private readonly apiScoreService: ApiScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
   ) {}
 
@@ -34,7 +34,7 @@ export class APIScoreController {
     const fromNationalCode = Number(getTransferScoreDto.nationalCode);
     const fromAccountNumber = Number(getTransferScoreDto.accountNumber);
 
-    return this.scoreService.getTransferScoreFrom(
+    return this.apiScoreService.getTransferScoreFrom(
       fromNationalCode,
       fromAccountNumber,
     );
@@ -46,7 +46,7 @@ export class APIScoreController {
     const fromNationalCode = Number(getTransferScoreDto.nationalCode);
     const fromAccountNumber = Number(getTransferScoreDto.accountNumber);
 
-    return this.scoreService.getTransferScoreTo(
+    return this.apiScoreService.getTransferScoreTo(
       fromNationalCode,
       fromAccountNumber,
     );
@@ -64,7 +64,7 @@ export class APIScoreController {
     )
     referenceCode: number,
   ) {
-    return this.scoreService.getTransferByReferenceCode(referenceCode);
+    return this.apiScoreService.getTransferByReferenceCode(referenceCode);
   }
 
   @UseGuards(ApiKeyGuard)
@@ -79,7 +79,7 @@ export class APIScoreController {
     )
     referenceCode: number,
   ) {
-    return this.scoreService.getUsedScoreByReferenceCode(referenceCode);
+    return this.apiScoreService.getUsedScoreByReferenceCode(referenceCode);
   }
 
   @UseGuards(ApiKeyGuard)
@@ -94,7 +94,7 @@ export class APIScoreController {
     )
     nationalCode: number,
   ) {
-    return this.scoreService.findByNationalCode(nationalCode);
+    return this.apiScoreService.findByNationalCode(nationalCode);
   }
 
   @UseGuards(ApiKeyGuard)
@@ -107,7 +107,7 @@ export class APIScoreController {
     const toAccountNumber = Number(transferScoreDto.toAccountNumber);
     const score = transferScoreDto.score;
     const ip = req.ip || req.connection.remoteAddress;
-    return this.scoreService.transferScore(
+    return this.apiScoreService.transferScore(
       fromNationalCode,
       toNationalCode,
       fromAccountNumber,
@@ -125,7 +125,7 @@ export class APIScoreController {
     const nationalCode = Number(useScoreDto.nationalCode);
     const accountNumber = Number(useScoreDto.accountNumber);
     const score = useScoreDto.score;
-    return this.scoreService.usedScore(
+    return this.apiScoreService.usedScore(
       nationalCode,
       accountNumber,
       score,
@@ -145,7 +145,7 @@ export class APIScoreController {
     )
     referenceCode: number,
   ) {
-    return this.scoreService.acceptUsedScore(referenceCode);
+    return this.apiScoreService.acceptUsedScore(referenceCode);
   }
 
   @UseGuards(ApiKeyGuard)
@@ -160,7 +160,7 @@ export class APIScoreController {
     )
     referenceCode: number,
   ) {
-    return this.scoreService.cancleUsedScore(referenceCode);
+    return this.apiScoreService.cancleUsedScore(referenceCode);
   }
 
   @Get('testApi/1')

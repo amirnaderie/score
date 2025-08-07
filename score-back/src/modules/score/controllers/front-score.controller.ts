@@ -14,16 +14,16 @@ import {
 
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
-import { ScoreService } from '../provider/score.service';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ErrorMessages } from 'src/constants/error-messages.constants';
 import { User } from 'src/interfaces/user.interface';
 import { GetUser } from 'src/decorators/getUser.decorator';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
+import { FrontScoreService } from '../provider/front-score.service';
 
 @Controller('score')
 export class FrontScoreController {
-  constructor(private readonly scoreService: ScoreService) {}
+  constructor(private readonly frontScoreService: FrontScoreService) {}
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.view', 'score.confirm', 'score.branch')
@@ -38,7 +38,7 @@ export class FrontScoreController {
     )
     nationalCode: number,
   ) {
-    return this.scoreService.findByNationalCodeForFront(nationalCode);
+    return this.frontScoreService.findByNationalCodeForFront(nationalCode);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -49,7 +49,7 @@ export class FrontScoreController {
     @GetUser() user: User,
     @Body() createUseScoreDto: CreateUseScoreDto,
   ) {
-    return this.scoreService.usedScoreForFront(createUseScoreDto, user);
+    return this.frontScoreService.usedScoreForFront(createUseScoreDto, user);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -67,7 +67,7 @@ export class FrontScoreController {
     )
     usedScoreId: number,
   ) {
-    return this.scoreService.acceptUsedScoreFront(usedScoreId, user);
+    return this.frontScoreService.acceptUsedScoreFront(usedScoreId, user);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -85,6 +85,6 @@ export class FrontScoreController {
     )
     usedScoreId: number,
   ) {
-    return this.scoreService.cancleUsedScoreFront(usedScoreId, user);
+    return this.frontScoreService.cancleUsedScoreFront(usedScoreId, user);
   }
 }

@@ -18,7 +18,7 @@ export class UsedScore extends BaseEntity {
   usedScore: Score;
 
   @Column({
-    type: 'int',
+    type: 'bigint',
     nullable: false,
     default: 0,
   })
@@ -45,7 +45,7 @@ export class UsedScore extends BaseEntity {
 
   @Index('IX_TransferScores_referenceCode')
   @Column({
-    type: 'int',
+    type: 'bigint',
     nullable: true,
   })
   referenceCode;

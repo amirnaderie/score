@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { ElkTestService } from './modules/event/elk-test.service';
+import { ElkTestService } from './modules/event/providers/elk/elk-test.service';
 
 @Controller()
 export class AppController {

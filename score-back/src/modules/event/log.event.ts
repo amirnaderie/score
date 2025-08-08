@@ -1,15 +1,13 @@
-import { LogParams } from "./interfaces/log.interface";
+import { LogParams } from './interfaces/log.interface';
 
 export class LogEvent {
-    private logParams: LogParams;
+  private logParams: LogParams;
 
-    constructor(
-        logParams: LogParams
-    ) { 
-        this.logParams = logParams;
-    }
+  constructor(logParams: LogParams) {
+    this.logParams = logParams;
+  }
 
-    getLogParams(): LogParams {
-        return this.logParams;
-    }
+  getLogParams(): LogParams {
+    return this.logParams;
+  }
 }

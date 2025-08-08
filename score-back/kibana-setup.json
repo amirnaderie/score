@@ -1,0 +1,42 @@
+{
+  "index_patterns": [
+    {
+      "title": "score-logs-*",
+      "timeFieldName": "@timestamp",
+      "fields": [
+        {
+          "name": "@timestamp",
+          "type": "date"
+        },
+        {
+          "name": "message",
+          "type": "text"
+        },
+        {
+          "name": "level",
+          "type": "keyword"
+        },
+        {
+          "name": "fileName",
+          "type": "keyword"
+        },
+        {
+          "name": "logTypes",
+          "type": "keyword"
+        },
+        {
+          "name": "method",
+          "type": "keyword"
+        },
+        {
+          "name": "service",
+          "type": "keyword"
+        },
+        {
+          "name": "environment",
+          "type": "keyword"
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,6 @@ import { Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LogEvent } from '../../../modules/event/log.event';
 import { logTypes } from '../../../modules/event/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
@@ -14,6 +13,7 @@ import { User } from 'src/interfaces/user.interface';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 import moment from 'moment-jalaali';
 import { SharedProvider } from './shared.provider';
+import { LogEvent } from 'src/modules/event/providers/log.event';
 
 @Injectable()
 export class FrontScoreService {

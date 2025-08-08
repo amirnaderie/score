@@ -4,11 +4,11 @@ import { Repository } from 'typeorm';
 import { UsedScore } from '../entities/used-score.entity';
 import { ScoreInterface } from '../interfaces/score.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LogEvent } from '../../../modules/event/log.event';
 import { logTypes } from '../../../modules/event/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
+import { LogEvent } from 'src/modules/event/providers/log.event';
 
 @Injectable()
 export class SharedProvider {
@@ -22,7 +22,7 @@ export class SharedProvider {
   async consumeScore(
     scoreRec: Partial<ScoreInterface>[] | null,
     score: number,
-    persoanleCode: number,
+    personalCode: number,
     referenceCode: number | null,
   ) {
     try {
@@ -36,8 +36,12 @@ export class SharedProvider {
             message: 'Insufficient score to use',
             requestBody: JSON.stringify({
               scoreId: scoreRec[0]?.id,
-              persoanleCode,
+              personalCode,
               referenceCode,
+              nationalCode: scoreRec[0].nationalCode,
+              accountNumber: scoreRec[0].accountNumber,
+              usableScore: scoreRec[0].usableScore,
+              requestScore: score,
             }),
             stack: '',
           }),
@@ -50,13 +54,13 @@ export class SharedProvider {
       }
       let personnelData: any = null;
 
-      if (persoanleCode)
-        personnelData = await this.authService.getPersonnelData(persoanleCode);
+      if (personalCode)
+        personnelData = await this.authService.getPersonnelData(personalCode);
 
       const UseScore = this.UsedScoreRepository.create({
         usedScore: { id: scoreRec[0].id },
         score: score,
-        personalCode: persoanleCode ? Number(persoanleCode) : null,
+        personalCode: personalCode ? Number(personalCode) : null,
         branchCode: personnelData?.branchCode
           ? Number(personnelData?.branchCode)
           : null,

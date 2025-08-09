@@ -11,9 +11,9 @@ import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { BankCoreProvider } from './coreBank.provider';
 import { User } from 'src/interfaces/user.interface';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
-import moment from 'moment-jalaali';
 import { SharedProvider } from './shared.provider';
 import { LogEvent } from 'src/modules/event/providers/log.event';
+const moment = require('moment-jalaali');
 
 @Injectable()
 export class FrontScoreService {

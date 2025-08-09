@@ -34,15 +34,15 @@ export class EventHandler {
       await this.LogRepository.save(logData);
 
       // Send to ELK stack
-      await this.elkLoggerService.info({
-        fileName,
-        logTypes,
-        message,
-        method,
-        stack,
-        requestBody,
-        timestamp: new Date().toISOString(),
-      });
+      // await this.elkLoggerService.info({
+      //   fileName,
+      //   logTypes,
+      //   message,
+      //   method,
+      //   stack,
+      //   requestBody,
+      //   timestamp: new Date().toISOString(),
+      // });
     } catch (error) {
       console.log('Error in Logging', error);
       await this.elkLoggerService.error({

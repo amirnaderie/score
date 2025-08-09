@@ -10,6 +10,8 @@ import { Cache } from 'cache-manager'; // Add this import
 @Injectable()
 export class BankCoreProvider {
   private loginUrl: string;
+  private depositUrl: string;
+  private getCustomerDetail: string;
   private apiKey: string;
   private expiration: string;
   private userName: string;
@@ -23,6 +25,10 @@ export class BankCoreProvider {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.loginUrl = this.configService.get<string>('BANKCORE_LOGIN_URL');
+    this.depositUrl = this.configService.get<string>('BANKCORE_DEPOSIT_URL');
+    this.getCustomerDetail = this.configService.get<string>(
+      'BANKCORE_GET_CUSTOMER_BRIEF_DETAIL_URL',
+    );
     this.apiKey = this.configService.get<string>('BANKCORE_API_KEY');
     this.userName = this.configService.get<string>('BANKCORE_USERNAME');
     this.password = this.configService.get<string>('BANKCORE_PASSWORD');
@@ -34,7 +40,7 @@ export class BankCoreProvider {
   async login(): Promise<string> {
     try {
       const response = await axios.post(
-        `${this.loginUrl}/apiGw/loginStatic`,
+        `${this.loginUrl}`,
         { username: this.userName, password: this.password },
         {
           headers: {
@@ -100,7 +106,7 @@ export class BankCoreProvider {
   async getCustomerBriefDetail(nationalCode: number): Promise<any> {
     const sessionId = await this.getsessionId();
 
-    const url = `${this.loginUrl}/getCustomerBriefDetail?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
+    const url = `${this.getCustomerDetail}?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
     try {
       const response = await axios.post(
         url,
@@ -152,7 +158,7 @@ export class BankCoreProvider {
     depositNumber: (string | number)[],
   ): Promise<any> {
     const sessionId = await this.getsessionId();
-    const url = `${this.loginUrl}/deposit?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
+    const url = `${this.depositUrl}?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
     try {
       const response = await axios.post(
         url,

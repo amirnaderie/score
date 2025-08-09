@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   score-back:
-    image: score-back:1.0.7
+    image: score-back:1.0.8
     build:
       context: ./score-back
       dockerfile: Dockerfile
@@ -20,7 +20,7 @@ services:
       - ./score-back/.env.prod  # Only load production env file
 
   score-front:
-    image: score-front:1.0.7
+    image: score-front:1.0.8
     build:
       context: ./score-front
       dockerfile: Dockerfile

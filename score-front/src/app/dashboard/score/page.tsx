@@ -201,6 +201,11 @@ export default function Home() {
     const currentScore: ScoreRow = data.find(
       (scoreItem: ScoreRow) => scoreItem.accountNumber === accountNumber
     )!;
+    if (Number(consumeScores[accountNumber]) <= 0) {
+      toast.error("میزان استفاده نمی تواند صفر باشد!");
+      setSaving((prev) => ({ ...prev, [accountNumber]: false }));
+      return false;
+    }
 
     if (Number(consumeScores[accountNumber]) > currentScore.usableScore) {
       toast.error("مانده کافی نیست!");
@@ -355,7 +360,8 @@ export default function Home() {
                           className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                           disabled={
                             saving[row.accountNumber] ||
-                            !consumeScores[row.accountNumber]
+                            !consumeScores[row.accountNumber] ||
+                            Number(consumeScores[row.accountNumber]) <= 0
                           }
                           onClick={(e) => {
                             e.stopPropagation();

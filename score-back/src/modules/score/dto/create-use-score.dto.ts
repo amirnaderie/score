@@ -18,7 +18,7 @@ export class CreateUseScoreDto {
 
   @IsNotEmpty()
   @IsInt()
-  @IsPositive({ message: 'score should be positive' })
+  @IsPositive({ message: 'امتیاز باید بزرگتر از صفر باشد' })
   @Type(() => Number)
   score: number;
 }

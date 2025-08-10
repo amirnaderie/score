@@ -69,23 +69,17 @@ export class BankCoreProvider {
   async getsessionId(): Promise<string> {
     let sessionId;
     try {
-      sessionId = await this.cacheManager.get<string>('coreBankingSeesionId'); // Remove (this.cacheManager as any)
+      //sessionId = await this.cacheManager.get<string>('coreBankingSeesionId'); // Remove (this.cacheManager as any)
 
-      if (sessionId) return sessionId;
+      //if (sessionId) return sessionId;
       sessionId = await this.login();
 
-      await this.cacheManager.set(
-        'coreBankingSeesionId',
-        sessionId,
-        Number(this.expiration),
-      );
-      // await this.redis.set(
+      // await this.cacheManager.set(
       //   'coreBankingSeesionId',
       //   sessionId,
-      //   'EX',
       //   Number(this.expiration),
       // );
-
+     
       return sessionId;
     } catch (error) {
       this.eventEmitter.emit(

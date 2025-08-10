@@ -1,9 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import Redis from 'ioredis';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LogEvent } from 'src/modules/event/log.event';
+import { LogEvent } from 'src/modules/event/providers/log.event';
 import { logTypes } from 'src/modules/event/enums/logType.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager'; // Add this import
@@ -11,6 +10,8 @@ import { Cache } from 'cache-manager'; // Add this import
 @Injectable()
 export class BankCoreProvider {
   private loginUrl: string;
+  private depositUrl: string;
+  private getCustomerDetail: string;
   private apiKey: string;
   private expiration: string;
   private userName: string;
@@ -24,6 +25,10 @@ export class BankCoreProvider {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.loginUrl = this.configService.get<string>('BANKCORE_LOGIN_URL');
+    this.depositUrl = this.configService.get<string>('BANKCORE_DEPOSIT_URL');
+    this.getCustomerDetail = this.configService.get<string>(
+      'BANKCORE_GET_CUSTOMER_BRIEF_DETAIL_URL',
+    );
     this.apiKey = this.configService.get<string>('BANKCORE_API_KEY');
     this.userName = this.configService.get<string>('BANKCORE_USERNAME');
     this.password = this.configService.get<string>('BANKCORE_PASSWORD');
@@ -35,7 +40,7 @@ export class BankCoreProvider {
   async login(): Promise<string> {
     try {
       const response = await axios.post(
-        `${this.loginUrl}/apiGw/loginStatic`,
+        `${this.loginUrl}`,
         { username: this.userName, password: this.password },
         {
           headers: {
@@ -64,23 +69,17 @@ export class BankCoreProvider {
   async getsessionId(): Promise<string> {
     let sessionId;
     try {
-      sessionId = await this.cacheManager.get<string>('coreBankingSeesionId'); // Remove (this.cacheManager as any)
+      //sessionId = await this.cacheManager.get<string>('coreBankingSeesionId'); // Remove (this.cacheManager as any)
 
-      if (sessionId) return sessionId;
+      //if (sessionId) return sessionId;
       sessionId = await this.login();
 
-      await this.cacheManager.set(
-        'coreBankingSeesionId',
-        sessionId,
-        Number(this.expiration),
-      );
-      // await this.redis.set(
+      // await this.cacheManager.set(
       //   'coreBankingSeesionId',
       //   sessionId,
-      //   'EX',
       //   Number(this.expiration),
       // );
-
+     
       return sessionId;
     } catch (error) {
       this.eventEmitter.emit(
@@ -101,7 +100,7 @@ export class BankCoreProvider {
   async getCustomerBriefDetail(nationalCode: number): Promise<any> {
     const sessionId = await this.getsessionId();
 
-    const url = `${this.loginUrl}/getCustomerBriefDetail?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
+    const url = `${this.getCustomerDetail}?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
     try {
       const response = await axios.post(
         url,
@@ -153,7 +152,7 @@ export class BankCoreProvider {
     depositNumber: (string | number)[],
   ): Promise<any> {
     const sessionId = await this.getsessionId();
-    const url = `${this.loginUrl}/deposit?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
+    const url = `${this.depositUrl}?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
     try {
       const response = await axios.post(
         url,

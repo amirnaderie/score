@@ -23,7 +23,7 @@ export class TransferScore extends BaseEntity {
   toScore: Score;
 
   @Column({
-    type: 'int',
+    type: 'bigint',
     nullable: false,
     default: 0,
   })
@@ -36,10 +36,10 @@ export class TransferScore extends BaseEntity {
   })
   userId: string;
 
-@Index('IX_TransferScores_referenceCode')
+  @Index('IX_TransferScores_referenceCode')
   @Column({
-    type: 'int',
+    type: 'bigint',
     nullable: true,
   })
-  referenceCode
+  referenceCode;
 }

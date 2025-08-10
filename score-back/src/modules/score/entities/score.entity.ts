@@ -49,7 +49,6 @@ export class Score extends BaseEntity {
     precision: 0,
     select: true,
     nullable: true,
-   
   })
   updatedAt: Date;
 }

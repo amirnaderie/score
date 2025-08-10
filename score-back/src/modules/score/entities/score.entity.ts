@@ -2,7 +2,14 @@ import { BaseEntity, Column, Entity, Index, OneToMany } from 'typeorm';
 import { TransferScore } from './transfer-score.entity';
 import { UsedScore } from './used-score.entity';
 
+<<<<<<<<< Temporary merge branch 1
 @Index('IX_Scores_nationalCode_accountNumber', ['nationalCode', 'accountNumber','updatedAt']) // 👈 Composite index here
+=========
+@Index('IX_Scores_nationalCode_accountNumber', [
+  'nationalCode',
+  'accountNumber',
+]) // 👈 Composite index here
+>>>>>>>>> Temporary merge branch 2
 @Entity('Scores')
 export class Score extends BaseEntity {
   @Column({

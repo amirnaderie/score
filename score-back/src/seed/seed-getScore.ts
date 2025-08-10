@@ -5,7 +5,7 @@ export async function seedGetScoreProcedure(dataSource: DataSource) {
     IF OBJECT_ID('getScores', 'P') IS NOT NULL
       DROP PROCEDURE getScores;
     GO
-    CREATE PROCEDURE [dbo].[getScores] 
+    CREATE PROCEDURE PROCEDURE getScores
 	@accountNumber bigint,
 	@nationalCode bigint,
 	@expirationMonth int=18,
@@ -15,21 +15,34 @@ BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
-
-   select S.id,s.accountNumber,s.nationalCode,s.score,s.updated_at,Us.usedScore,GOTTS.gotScore,GIVETS.giveScore,(s.score-Us.usedScore+GOTTS.gotScore-GIVETS.giveScore) as usableScore,(s.score-Us.usedScore-GIVETS.giveScore) as transferableScore from [dbo].[Scores] S
-cross apply (
-  select sum(score) as usedScore from [dbo].[UsedScores] where scoreId=s.id group by scoreId
-) US
-cross apply (
-  select sum(score) as gotScore from [dbo].[TransferScores] where toScoreId=s.id group by toScoreId
-) GOTTS
-cross apply (
-  select sum(score) as giveScore from [dbo].[TransferScores] where fromScoreId=s.id group by fromScoreId
-) GIVETS
-where S.accountNumber=@accountNumber and nationalCode=@nationalCode and S.updated_at>=dbo.[ShamsiToGregorian]([dbo].[SubtractMonthsFromShamsi] (iif(@currentDate=0,FORMAT(GETDATE(), 'yyyyMMdd', 'fa'),@currentDate),18))
-
+    CREATE TABLE #TempScores (
+		id int,
+		accountNumber bigint,
+		nationalCode bigint,
+		score decimal(18,2),
+		updated_at datetime,
+		usedScore decimal(18,2),
+		gotScore decimal(18,2),
+		giveScore decimal(18,2),
+		usableScore decimal(18,2),
+		transferableScore decimal(18,2)
+	);
+	
+	-- Insert results from existing SP into temp table
+	INSERT INTO #TempScores
+	EXEC [dbo].[getValidScores] @accountNumber, @nationalCode, @expirationMonth, @currentDate;
+	
+	-- Calculate and return sums
+	SELECT 
+		SUM(usableScore) AS totalUsableScore,
+		SUM(transferableScore) AS totalTransferableScore,
+		COUNT(*) AS recordCount
+	FROM #TempScores;
+	
+	-- Clean up
+	DROP TABLE #TempScores;
+   
 END
-
   `);
   console.log('Seeded stored procedure: getScores');
 }

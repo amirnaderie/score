@@ -9,6 +9,7 @@ import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { LogEvent } from 'src/modules/event/providers/log.event';
+import { Score } from '../entities/score.entity';
 
 @Injectable()
 export class SharedProvider {
@@ -17,7 +18,21 @@ export class SharedProvider {
     private readonly authService: AuthService,
     @InjectRepository(UsedScore)
     private readonly UsedScoreRepository: Repository<UsedScore>,
-  ) {}
+    @InjectRepository(Score)
+    private readonly scoreRepository: Repository<Score>,
+  ) { }
+
+  async getScoresRowsBynationalCode(nationalCode: number) {
+    try {
+      const scoreRow = await this.scoreRepository.query(
+        'exec getScoresOfNationalCode @nationalCode=@0',
+        [nationalCode],
+      );
+      return scoreRow;
+    } catch (error) {
+      throw error
+    }
+  }
 
   async consumeScore(
     scoreRec: Partial<ScoreInterface>[] | null,

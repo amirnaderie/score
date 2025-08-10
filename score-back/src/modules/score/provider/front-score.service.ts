@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, HttpStatus } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -13,11 +13,14 @@ import { User } from 'src/interfaces/user.interface';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { SharedProvider } from './shared.provider';
 import { LogEvent } from 'src/modules/event/providers/log.event';
+import { ConfigService } from '@nestjs/config';
 const moment = require('moment-jalaali');
 
 @Injectable()
 export class FrontScoreService {
+  private staleMonths: string
   constructor(
+    private configService: ConfigService,
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,
     @InjectRepository(Score)
@@ -26,21 +29,26 @@ export class FrontScoreService {
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+    private readonly dataSource: DataSource
+  ) {
+    this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+  }
 
   public async findByNationalCodeForFront(nationalCode: number) {
-    let scoresOfNationalCode: Partial<Score>[] | null;
+    let scoresOfNationalCode: any[] | null;
     const scoresRec: any[] = [];
 
     try {
-      scoresOfNationalCode = await this.scoreRepository.find({
-        where: {
-          nationalCode: nationalCode,
-        },
-        order: {
-          accountNumber: 'ASC', // or 'DESC' for descending order
-        },
-      });
+      scoresOfNationalCode = await this.sharedProvider.getScoresRowsBynationalCode(nationalCode)
+
+      // scoresOfNationalCode = await this.scoreRepository.find({
+      //   where: {
+      //     nationalCode: nationalCode,
+      //   },
+      //   order: {
+      //     accountNumber: 'ASC', // or 'DESC' for descending order
+      //   },
+      // });
 
       if (!scoresOfNationalCode || scoresOfNationalCode.length === 0) {
         this.eventEmitter.emit(
@@ -62,46 +70,62 @@ export class FrontScoreService {
         });
       }
       for (const score of scoresOfNationalCode) {
-        const scoreRec = await this.scoreRepository.query(
-          'exec getScores @nationalCode=@0,@accountNumber=@1',
-          [score.nationalCode, score.accountNumber],
-        );
-        const usedScore = await this.UsedScoreRepository.find({
-          where: {
-            usedScore: { id: scoreRec[0].id },
-          },
-          order: {
-            id: 'ASC', // or 'DESC' for descending order
-          },
-        });
+        const query = `SELECT * FROM dbo.getValidScoresFunction(@0, @1,@2,@3)`;
+        const scoreRecs = await this.dataSource.query(query, [
+          score.accountNumber,
+          nationalCode,
+          Number(this.staleMonths),
+          0
+        ]);
+
+        let usedScore: any[] = []
+        if (scoreRecs && scoreRecs.length > 0) {
+          let usedRecs: any[] = []
+          for (const item of scoreRecs) {
+            usedRecs = await this.UsedScoreRepository.find({
+              where: {
+                usedScore: { id: item.id },
+              },
+              order: {
+                id: 'ASC', // or 'DESC' for descending order
+              },
+            });
+
+            if (usedRecs && usedRecs.length > 0) {
+              usedRecs.map((usedItem: UsedScore) => {
+                usedScore.push({
+                  id: usedItem.id,
+                  score: usedItem.score,
+                  createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
+                  updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
+                  personaCode: usedItem.personalCode,
+                  status: usedItem.status,
+                  personalCode: usedItem.personalCode,
+                  branchCode: usedItem.branchCode,
+                  branchName: usedItem.branchName,
+                });
+              })
+
+            }
+          }
+        }
         scoresRec.push({
-          scoreId: score.id,
           accountNumber: score.accountNumber,
-          usableScore: scoreRec[0].usableScore,
-          transferableScore: scoreRec[0].transferableScore,
+          usableScore: score.usableScore,
+          transferableScore: score.transferableScore,
           depositType: '1206',
-          updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
-          usedScore: usedScore.map((usedItem: UsedScore) => {
-            return {
-              id: usedItem.id,
-              score: usedItem.score,
-              createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
-              updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
-              personaCode: usedItem.personalCode,
-              status: usedItem.status,
-              personalCode: usedItem.personalCode,
-              branchCode: usedItem.branchCode,
-              branchName: usedItem.branchName,
-            };
-          }),
+          //updatedAt: moment(item.updatedAt).format('jYYYY/jMM/jDD'),
+          usedScore: usedScore
         });
+
+
       }
       let fullName: string = '';
       try {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+      } catch { }
       return {
         data: {
           scoresRec,

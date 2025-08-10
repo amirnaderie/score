@@ -18,7 +18,7 @@ const moment = require('moment-jalaali');
 
 @Injectable()
 export class FrontScoreService {
-  private staleMonths: string
+  private staleMonths: string;
   constructor(
     private configService: ConfigService,
     private eventEmitter: EventEmitter2,
@@ -29,7 +29,7 @@ export class FrontScoreService {
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
   }
@@ -39,16 +39,8 @@ export class FrontScoreService {
     const scoresRec: any[] = [];
 
     try {
-      scoresOfNationalCode = await this.sharedProvider.getScoresRowsBynationalCode(nationalCode)
-
-      // scoresOfNationalCode = await this.scoreRepository.find({
-      //   where: {
-      //     nationalCode: nationalCode,
-      //   },
-      //   order: {
-      //     accountNumber: 'ASC', // or 'DESC' for descending order
-      //   },
-      // });
+      scoresOfNationalCode =
+        await this.sharedProvider.getScoresRowsBynationalCode(nationalCode);
 
       if (!scoresOfNationalCode || scoresOfNationalCode.length === 0) {
         this.eventEmitter.emit(
@@ -58,7 +50,7 @@ export class FrontScoreService {
             fileName: 'front-score.service',
             method: 'findByNationalCodeForFront',
             message: 'ُThere is no record for given nationalCode',
-            requestBody: JSON.stringify({ nationalCode: nationalCode }),
+            requestBody: JSON.stringify({ nationalCode }),
             stack: '',
           }),
         );
@@ -75,12 +67,12 @@ export class FrontScoreService {
           score.accountNumber,
           nationalCode,
           Number(this.staleMonths),
-          0
+          0,
         ]);
 
-        let usedScore: any[] = []
+        let usedScore: any[] = [];
         if (scoreRecs && scoreRecs.length > 0) {
-          let usedRecs: any[] = []
+          let usedRecs: any[] = [];
           for (const item of scoreRecs) {
             usedRecs = await this.UsedScoreRepository.find({
               where: {
@@ -104,8 +96,7 @@ export class FrontScoreService {
                   branchCode: usedItem.branchCode,
                   branchName: usedItem.branchName,
                 });
-              })
-
+              });
             }
           }
         }
@@ -115,17 +106,15 @@ export class FrontScoreService {
           transferableScore: score.transferableScore,
           depositType: '1206',
           //updatedAt: moment(item.updatedAt).format('jYYYY/jMM/jDD'),
-          usedScore: usedScore
+          usedScore: usedScore,
         });
-
-
       }
       let fullName: string = '';
       try {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch { }
+      } catch {}
       return {
         data: {
           scoresRec,

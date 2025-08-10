@@ -10,27 +10,33 @@ import handelError from '../../../utility/handel-error';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { LogEvent } from 'src/modules/event/providers/log.event';
 import { Score } from '../entities/score.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SharedProvider {
+  private staleMonths: string;
+
   constructor(
     private eventEmitter: EventEmitter2,
+    private readonly configService: ConfigService,
     private readonly authService: AuthService,
     @InjectRepository(UsedScore)
     private readonly UsedScoreRepository: Repository<UsedScore>,
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
-  ) { }
+  ) {
+    this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+  }
 
   async getScoresRowsBynationalCode(nationalCode: number) {
     try {
       const scoreRow = await this.scoreRepository.query(
-        'exec getScoresOfNationalCode @nationalCode=@0',
-        [nationalCode],
+        'exec getScoresOfNationalCode @nationalCode=@0,expirationMonth=@1,currentDate=@2',
+        [nationalCode, Number(this.staleMonths), 0],
       );
       return scoreRow;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 

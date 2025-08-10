@@ -5,7 +5,7 @@ import {
   HttpStatus,
   ConflictException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -24,6 +24,8 @@ const moment = require('moment-jalaali');
 
 @Injectable()
 export class ApiScoreService {
+  private staleMonths: string;
+
   constructor(
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,
@@ -36,28 +38,28 @@ export class ApiScoreService {
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+    private readonly dataSource: DataSource,
+  ) {
+    this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+  }
 
   public async findByNationalCode(nationalCode: number) {
-    let scoresOfNationalCode: Partial<Score>[] | null;
-    let scoresRec: any[] = [];
+    let scoresOfNationalCode: any[] | null;
+    const scoresRec: any[] = [];
 
     try {
-      scoresOfNationalCode = await this.scoreRepository.find({
-        where: {
-          nationalCode: nationalCode,
-        },
-      });
+      scoresOfNationalCode =
+        await this.sharedProvider.getScoresRowsBynationalCode(nationalCode);
 
       if (!scoresOfNationalCode || scoresOfNationalCode.length === 0) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'findOneByNationalCode',
+            fileName: 'api-score.service',
+            method: 'findByNationalCode',
             message: 'ُThere is no record for given nationalCode',
-            requestBody: JSON.stringify({ nationalCode: nationalCode }),
+            requestBody: JSON.stringify({ nationalCode }),
             stack: '',
           }),
         );
@@ -67,17 +69,12 @@ export class ApiScoreService {
           statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
         });
-        // throw new NotFoundException(ErrorMessages.NOT_FOUND);
       }
       for (const score of scoresOfNationalCode) {
-        const scoreRec = await this.scoreRepository.query(
-          'exec getScores @nationalCode=@0,@accountNumber=@1',
-          [score.nationalCode, score.accountNumber],
-        );
         scoresRec.push({
           accountNumber: score.accountNumber,
-          usableScore: scoreRec[0].usableScore,
-          transferableScore: scoreRec[0].transferableScore,
+          usableScore: score.usableScore,
+          transferableScore: score.transferableScore,
           depositType: '1206',
           updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
         });

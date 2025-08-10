@@ -5,7 +5,7 @@ export async function seedGetValidScoreProcedure(dataSource: DataSource) {
     IF OBJECT_ID('getValidScores', 'P') IS NOT NULL
       DROP PROCEDURE getValidScores;
     GO
-    CREATE PROCEDURE PROCEDURE [dbo].[getValidScores] 
+  CREATE PROCEDURE [dbo].[getValidScores] 
 	@accountNumber bigint,
 	@nationalCode bigint,
 	@expirationMonth int=18,

@@ -5,30 +5,101 @@ export async function seedGetValidScoreProcedure(dataSource: DataSource) {
     IF OBJECT_ID('getValidScores', 'P') IS NOT NULL
       DROP PROCEDURE getValidScores;
     GO
-  CREATE PROCEDURE [dbo].[getValidScores] 
-	@accountNumber bigint,
-	@nationalCode bigint,
-	@expirationMonth int=18,
-	@currentDate int=0
+  ALTER   FUNCTION [dbo].[getScoresFunction]
+(
+    @accountNumber BIGINT,
+    @nationalCode BIGINT,
+    @expirationMonth INT = 18,
+    @currentDate INT = 0
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT 
+        MAX(accountNumber) as accountNumber,
+        MAX(nationalCode) as nationalCode,
+        SUM(usableScore) AS usableScore,
+        SUM(transferableScore) AS transferableScore,
+        COUNT(*) AS recordCount,
+		max(updated_at) as updated_at
+    FROM dbo.getValidScoresFunction(@accountNumber, @nationalCode, @expirationMonth, @currentDate)
+);
+
+ALTER   FUNCTION [dbo].[getValidScoresFunction]
+(
+    @accountNumber BIGINT,
+    @nationalCode BIGINT,
+    @expirationMonth INT = 18,
+    @currentDate INT = 0
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT 
+        S.id,
+        S.accountNumber,
+        S.nationalCode,
+        S.score,
+        S.updated_at,
+        ISNULL(Us.usedScore, 0) as usedScore,
+        ISNULL(GOTTS.gotScore, 0) as gotScore,
+        ISNULL(GIVETS.giveScore, 0) as giveScore,
+        (S.score - ISNULL(Us.usedScore, 0) + ISNULL(GOTTS.gotScore, 0) - ISNULL(GIVETS.giveScore, 0)) as usableScore,
+        (S.score - ISNULL(Us.usedScore, 0) - ISNULL(GIVETS.giveScore, 0)) as transferableScore
+    FROM [dbo].[Scores] S
+    OUTER APPLY (
+        SELECT SUM(score) as usedScore 
+        FROM [dbo].[UsedScores] 
+        WHERE scoreId = S.id 
+        GROUP BY scoreId
+    ) US
+    OUTER APPLY (
+        SELECT SUM(score) as gotScore 
+        FROM [dbo].[TransferScores] 
+        WHERE toScoreId = S.id 
+        GROUP BY toScoreId
+    ) GOTTS
+    OUTER APPLY (
+        SELECT SUM(score) as giveScore 
+        FROM [dbo].[TransferScores] 
+        WHERE fromScoreId = S.id 
+        GROUP BY fromScoreId
+    ) GIVETS
+    WHERE S.accountNumber = @accountNumber 
+      AND S.nationalCode = @nationalCode 
+      AND S.updated_at >= dbo.[ShamsiToGregorian](
+          [dbo].[SubtractMonthsFromShamsi](
+              IIF(@currentDate = 0, FORMAT(GETDATE(), 'yyyyMMdd', 'fa'), @currentDate), 
+              @expirationMonth
+          )
+      )
+);
+
+ALTER PROCEDURE [dbo].[getScoresOfNationalCode]
+    @nationalCode BIGINT,
+    @expirationMonth INT = 18,
+    @currentDate INT = 0
 AS
 BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
-	SET NOCOUNT ON;
-
-   select S.id,s.accountNumber,s.nationalCode,s.score,s.updated_at,Us.usedScore,GOTTS.gotScore,GIVETS.giveScore,(s.score-Us.usedScore+GOTTS.gotScore-GIVETS.giveScore) as usableScore,(s.score-Us.usedScore-GIVETS.giveScore) as transferableScore from [dbo].[Scores] S
-cross apply (
-  select sum(score) as usedScore from [dbo].[UsedScores] where scoreId=s.id group by scoreId
-) US
-cross apply (
-  select sum(score) as gotScore from [dbo].[TransferScores] where toScoreId=s.id group by toScoreId
-) GOTTS
-cross apply (
-  select sum(score) as giveScore from [dbo].[TransferScores] where fromScoreId=s.id group by fromScoreId
-) GIVETS
-where S.accountNumber=@accountNumber and nationalCode=@nationalCode and S.updated_at>=dbo.[ShamsiToGregorian]([dbo].[SubtractMonthsFromShamsi] (iif(@currentDate=0,FORMAT(GETDATE(), 'yyyyMMdd', 'fa'),@currentDate),18))
-
-END
+    SET NOCOUNT ON;
+    
+    SELECT 
+        f.accountNumber,
+        f.nationalCode,
+        f.usableScore,
+        f.transferableScore,
+        f.recordCount,
+		f.updated_at
+    FROM (
+        SELECT DISTINCT accountNumber
+        FROM [dbo].[Scores]
+        WHERE nationalCode = @nationalCode
+    ) accounts
+    CROSS APPLY dbo.getScoresFunction(accounts.accountNumber, @nationalCode, @expirationMonth, @currentDate) f
+    WHERE f.recordCount > 0; -- Only return accounts that have valid scores
+END;
 
   `);
   console.log('Seeded stored procedure: getValidScores');

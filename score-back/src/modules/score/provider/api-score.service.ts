@@ -76,7 +76,7 @@ export class ApiScoreService {
           usableScore: score.usableScore,
           transferableScore: score.transferableScore,
           depositType: '1206',
-          updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
+          updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
         });
       }
 
@@ -102,7 +102,7 @@ export class ApiScoreService {
     fromAccountNumber: number,
     toAccountNumber: number,
     score: number,
-    userId: string,
+    ip: string,
     referenceCode: number | null,
   ) {
     let scoreRec: Partial<ScoreInterface>[] | null;
@@ -125,6 +125,7 @@ export class ApiScoreService {
               MAX_TRANSFERABLE_SCORE: this.configService.get<string>(
                 'MAX_TRANSFERABLE_SCORE',
               ),
+              ip
             }),
             stack: '',
           }),
@@ -182,7 +183,7 @@ export class ApiScoreService {
             error: 'Bad Request',
           });
         }
-      } catch (error) {}
+      } catch (error) { }
 
       if (referenceCode) {
         const foundReferenceCode = await this.TransferScoreRepository.findOne({
@@ -287,7 +288,8 @@ export class ApiScoreService {
         fromScore: { id: scoreRec[0].id },
         toScore: { id: toRec.id },
         score,
-        userId,
+        personalCode: null,
+        branchCode: null,
         referenceCode,
       });
       await this.TransferScoreRepository.save(TransferScore);
@@ -349,7 +351,7 @@ export class ApiScoreService {
           error: 'Bad Request',
         });
       }
-    } catch (error) {}
+    } catch (error) { }
 
     const scoreRec: Partial<ScoreInterface>[] | null =
       await this.scoreRepository.query(
@@ -466,13 +468,13 @@ export class ApiScoreService {
   }
 
   async getTransferByReferenceCode(referenceCode: number) {
-    const TransferScoreRec = await this.TransferScoreRepository.findOne({
+    const TransferScoreRec = await this.TransferScoreRepository.find({
       where: {
         referenceCode,
       },
       relations: ['fromScore', 'toScore'],
     });
-    if (!TransferScoreRec)
+    if (!TransferScoreRec && TransferScoreRec.length === 0)
       throw new NotFoundException({
         data: {},
         message: ErrorMessages.NOT_FOUND,
@@ -480,14 +482,16 @@ export class ApiScoreService {
         error: 'Not Found',
       });
 
+    const totalScore = TransferScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
+
     const data = {
-      score: TransferScoreRec.score,
-      fromAccountNumber: TransferScoreRec.fromScore.accountNumber,
-      fromNationalCode: TransferScoreRec.fromScore.nationalCode,
-      toAccountNumber: TransferScoreRec.toScore.accountNumber,
-      toNationalCode: TransferScoreRec.toScore.nationalCode,
-      referenceCode: TransferScoreRec.referenceCode,
-      createdAt: moment(TransferScoreRec.createdAt).format('jYYYY/jMM/jDD'),
+      score: totalScore,
+      fromAccountNumber: TransferScoreRec[0].fromScore.accountNumber,
+      fromNationalCode: TransferScoreRec[0].fromScore.nationalCode,
+      toAccountNumber: TransferScoreRec[0].toScore.accountNumber,
+      toNationalCode: TransferScoreRec[0].toScore.nationalCode,
+      referenceCode: TransferScoreRec[0].referenceCode,
+      createdAt: moment(TransferScoreRec[0].createdAt).format('jYYYY/jMM/jDD'),
     };
     return {
       data,
@@ -496,7 +500,7 @@ export class ApiScoreService {
     };
   }
   async getUsedScoreByReferenceCode(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode,
       },
@@ -509,14 +513,15 @@ export class ApiScoreService {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
+    const totalScore = usedScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
 
     const data = {
-      score: usedScoreRec.score,
-      accountNumber: usedScoreRec.usedScore.accountNumber,
-      nationalCode: usedScoreRec.usedScore.nationalCode,
-      referenceCode: usedScoreRec.referenceCode,
-      createdAt: moment(usedScoreRec.updatedAt).format('jYYYY/jMM/jDD'),
-      status: usedScoreRec.status,
+      score: totalScore,
+      accountNumber: usedScoreRec[0].usedScore.accountNumber,
+      nationalCode: usedScoreRec[0].usedScore.nationalCode,
+      referenceCode: usedScoreRec[0].referenceCode,
+      createdAt: moment(usedScoreRec[0].updatedAt).format('jYYYY/jMM/jDD'),
+      status: usedScoreRec[0].status,
     };
     return {
       data,
@@ -526,27 +531,29 @@ export class ApiScoreService {
   }
 
   async acceptUsedScore(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode,
       },
     });
 
-    if (!usedScoreRec || usedScoreRec.branchCode)
+    if (!usedScoreRec || usedScoreRec.length === 0)
       throw new NotFoundException({
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
 
-    if (usedScoreRec.status)
+    if (usedScoreRec[0].status)
       throw new BadRequestException({
         message: ErrorMessages.VALIDATE_INFO_FAILED,
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',
       });
-    usedScoreRec.status = true;
-    usedScoreRec.updatedAt = new Date();
+    for (let index = 0; index < usedScoreRec.length; index++) {
+      usedScoreRec[index].status = true;
+      usedScoreRec[index].updatedAt = new Date();
+    }
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
       this.eventEmitter.emit(
@@ -576,20 +583,28 @@ export class ApiScoreService {
   }
 
   async cancleUsedScore(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode: referenceCode,
       },
     });
 
-    if (!usedScoreRec || usedScoreRec.branchCode || usedScoreRec.status)
+    if (!usedScoreRec || usedScoreRec.length === 0)
       throw new NotFoundException({
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
+
+    if (usedScoreRec[0].status)
+      throw new NotFoundException({
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+
     try {
-      await this.UsedScoreRepository.delete(usedScoreRec.id);
+      await this.UsedScoreRepository.remove(usedScoreRec);
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({

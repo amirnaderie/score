@@ -62,35 +62,44 @@ export class FrontScoreService {
         });
       }
       for (const score of scoresOfNationalCode) {
-        const query = `SELECT * FROM dbo.getValidScoresFunction(@0, @1,@2,@3)`;
-        const scoreRecs = await this.dataSource.query(query, [
-          score.accountNumber,
-          nationalCode,
-          Number(this.staleMonths),
-          0,
-        ]);
-
+        const scoreRecs = await this.sharedProvider.getValidScores(score.accountNumber, nationalCode)
         let usedScore: any[] = [];
         if (scoreRecs && scoreRecs.length > 0) {
           let usedRecs: any[] = [];
           for (const item of scoreRecs) {
-            usedRecs = await this.UsedScoreRepository.find({
-              where: {
-                usedScore: { id: item.id },
-              },
-              order: {
-                id: 'ASC', // or 'DESC' for descending order
-              },
-            });
+            const usedRecs = await this.UsedScoreRepository
+              .createQueryBuilder('usedScore')
+              .select([
+                'MAX(usedScore.referenceCode) as referenceCode',
+                'usedScore.scoreId as scoreId',
+                'SUM(usedScore.score) as score',
+                'MAX(usedScore.createdAt) as createdAt',
+                'MAX(usedScore.updatedAt) as updatedAt',
+                'MAX(usedScore.personalCode) as personalCode',
+                'CAST(MAX(CAST(usedScore.status as INT)) as BIT) as status',
+                'MAX(usedScore.branchCode) as branchCode',
+              ])
+              .where('usedScore.usedScore = :itemId', { itemId: item.id })
+              .groupBy('usedScore.scoreId')
+              .orderBy('usedScore.scoreId', 'ASC')
+              .getRawMany();
+
+            // usedRecs = await this.UsedScoreRepository.find({
+            //   where: {
+            //     usedScore: { id: item.id },
+            //   },
+            //   order: {
+            //     id: 'ASC', // or 'DESC' for descending order
+            //   },
+            // });
 
             if (usedRecs && usedRecs.length > 0) {
               usedRecs.map((usedItem: UsedScore) => {
                 usedScore.push({
-                  id: usedItem.id,
+                  referenceCode: usedItem.referenceCode,
                   score: usedItem.score,
                   createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
                   updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
-                  personaCode: usedItem.personalCode,
                   status: usedItem.status,
                   personalCode: usedItem.personalCode,
                   branchCode: usedItem.branchCode,
@@ -105,7 +114,7 @@ export class FrontScoreService {
           usableScore: score.usableScore,
           transferableScore: score.transferableScore,
           depositType: '1206',
-          //updatedAt: moment(item.updatedAt).format('jYYYY/jMM/jDD'),
+          updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
           usedScore: usedScore,
         });
       }
@@ -114,7 +123,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+      } catch { }
       return {
         data: {
           scoresRec,
@@ -138,9 +147,11 @@ export class FrontScoreService {
     createUseScoreDto: CreateUseScoreDto,
     user: User,
   ) {
-    const scoreRec = await this.scoreRepository.findBy({
-      id: createUseScoreDto.scoreId,
-    });
+    // const scoreRec = await this.scoreRepository.findBy({
+    //   id: createUseScoreDto.scoreId,
+    // });
+
+    const scoreRec = await this.sharedProvider.getValidScores(Number(createUseScoreDto.accountNumber), Number(createUseScoreDto.nationalCode))
 
     if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
       this.eventEmitter.emit(
@@ -149,10 +160,10 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'usedScoreForFront',
-          message: 'ُThere is no record for given nationalCode',
+          message: 'ُThere is no record for given nationalCode and accountNumber',
           requestBody: JSON.stringify({
-            scoreId: createUseScoreDto.scoreId,
-            user,
+            CreateUseScoreDto,
+            user
           }),
           stack: '',
         }),
@@ -177,18 +188,19 @@ export class FrontScoreService {
     );
   }
 
-  async acceptUsedScoreFront(usedScoreId: number, user: User) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+  async acceptUsedScoreFront(referenceCode: number, user: User) {
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
-        id: usedScoreId,
+        referenceCode,
       },
     });
-    const userData: Partial<User> = await this.authService.getPersonnelData(
+    const userData: Partial<User> = await this.authService.getPersonalData(
       Number(user.userName),
     );
     if (
       !usedScoreRec ||
-      usedScoreRec.branchCode !== Number(userData.branchCode)
+      usedScoreRec.length === 0 ||
+      usedScoreRec[0].branchCode !== Number(userData.branchCode)
     )
       throw new NotFoundException({
         data: [],
@@ -196,7 +208,10 @@ export class FrontScoreService {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
-    usedScoreRec.status = true;
+    for (let index = 0; index < usedScoreRec.length; index++) {
+      usedScoreRec[index].status = true;
+      usedScoreRec[index].updatedAt = new Date();
+    }
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
       this.eventEmitter.emit(
@@ -205,8 +220,8 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'acceptUsedScore',
-          message: `user Accepted usedScore`,
-          requestBody: JSON.stringify({ usedScoreRec, user }),
+          message: `personalCode:${user.userName} branchCode:${userData.branchCode} deleted a usedScore `,
+          requestBody: JSON.stringify({ referenceCode, user }),
           stack: '',
         }),
       );
@@ -216,7 +231,7 @@ export class FrontScoreService {
         this.eventEmitter,
         'front-score.service',
         'acceptUsedScoreFront',
-        { usedScoreId, personalCode: userData.branchCode },
+        { referenceCode, personalCode: userData.branchCode },
       );
     }
     return {
@@ -225,18 +240,19 @@ export class FrontScoreService {
     };
   }
 
-  async cancleUsedScoreFront(usedScoreId: number, user: User) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+  async cancleUsedScoreFront(referenceCode: number, user: User) {
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
-        id: usedScoreId,
+        referenceCode,
       },
     });
-    const userData: Partial<User> = await this.authService.getPersonnelData(
+    const userData: Partial<User> = await this.authService.getPersonalData(
       Number(user.userName),
     );
     if (
       !usedScoreRec ||
-      usedScoreRec.branchCode !== Number(userData.branchCode)
+      usedScoreRec.length === 0 ||
+      usedScoreRec[0].branchCode !== Number(userData.branchCode)
     )
       throw new NotFoundException({
         data: {},
@@ -245,15 +261,15 @@ export class FrontScoreService {
         error: 'Not Found',
       });
     try {
-      await this.UsedScoreRepository.delete(usedScoreRec.id);
+      await this.UsedScoreRepository.remove(usedScoreRec);
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'cancleUsedScoreFront',
-          message: `personalCode:${userData.personalCode} branchCode:${user.branchCode} deleted a usedScore `,
-          requestBody: JSON.stringify({ usedScoreRec, user }),
+          message: `personalCode:${user.userName} branchCode:${userData.branchCode} deleted a usedScore `,
+          requestBody: JSON.stringify({ referenceCode, user }),
           stack: '',
         }),
       );
@@ -264,7 +280,7 @@ export class FrontScoreService {
         'front-score.service',
         'cancleUsedScoreFront',
         {
-          usedScoreId,
+          referenceCode,
           personalCode: user.personalCode,
           branchCode: user.branchCode,
         },

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { UsedScore } from '../entities/used-score.entity';
 import { ScoreInterface } from '../interfaces/score.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -24,17 +24,37 @@ export class SharedProvider {
     private readonly UsedScoreRepository: Repository<UsedScore>,
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
+    private readonly dataSource: DataSource,
+
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
   }
 
   async getScoresRowsBynationalCode(nationalCode: number) {
     try {
+      // const scoreRow = await this.scoreRepository.query(
+      //   'exec getScoresOfNationalCode @nationalCode=@0',
+      //   [nationalCode],
+      // );
       const scoreRow = await this.scoreRepository.query(
-        'exec getScoresOfNationalCode @nationalCode=@0,expirationMonth=@1,currentDate=@2',
-        [nationalCode, Number(this.staleMonths), 0],
+        'exec getScoresOfNationalCode @0, @1, @2',
+        [nationalCode, Number(this.staleMonths), 0]
       );
       return scoreRow;
+    } catch (error) {
+      throw error;
+    }
+  }
+  async getValidScores(accountNumber: number, nationalCode: number) {
+    try {
+      const query = `SELECT * FROM dbo.getValidScoresFunction(@0,@1,@2,@3)`;
+      const scoreRecs = await this.dataSource.query(query, [
+        accountNumber,
+        nationalCode,
+        Number(this.staleMonths),
+        0,
+      ]);
+      return scoreRecs;
     } catch (error) {
       throw error;
     }
@@ -76,7 +96,7 @@ export class SharedProvider {
       let personnelData: any = null;
 
       if (personalCode)
-        personnelData = await this.authService.getPersonnelData(personalCode);
+        personnelData = await this.authService.getPersonalData(personalCode);
 
       const UseScore = this.UsedScoreRepository.create({
         usedScore: { id: scoreRec[0].id },

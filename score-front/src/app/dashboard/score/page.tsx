@@ -23,6 +23,7 @@ interface UsedScore {
   status: boolean;
   personalCode: number | null;
   branchCode: number | null;
+  referenceCode: number | null;
 }
 
 interface ScoreRow {
@@ -126,27 +127,27 @@ export default function Home() {
     setConsumeScores((prev) => ({ ...prev, [accountNumber]: digits }));
   };
 
-  const acceptUse = async (id: number) => {
+  const acceptUse = async (referenceCode: number) => {
     setModalContent({
       title: "تایید ثبت نهایی",
       message: "آیا از ثبت نهایی این امتیاز مطمئن هستید؟",
       onConfirm: async () => {
         setIsConfirmModalOpen(false);
-        setSaveUse((prev) => ({ ...prev, [id]: true }));
+        setSaveUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
             `${process.env.NEXT_PUBLIC_API_URL}/score/accept-use`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ usedScoreId: id }),
+              body: JSON.stringify({ referenceCode }),
               credentials: "include",
             }
           );
           const json = await res.json();
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
-            setSaveUse((prev) => ({ ...prev, [id]: false }));
+            setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
             await fillData(Number(nationalCode));
           } else {
             toast.error("خطا در عملیات!");
@@ -154,33 +155,33 @@ export default function Home() {
         } catch (e) {
           toast.error("خطا در عملیات!");
         } finally {
-          setSaveUse((prev) => ({ ...prev, [id]: false }));
+          setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
         }
       },
     });
     setIsConfirmModalOpen(true);
   };
-  const cancelUse = async (id: number) => {
+  const cancelUse = async (referenceCode: number) => {
     setModalContent({
       title: "تایید لغو امتیاز",
       message: "آیا از لغو این امتیاز مطمئن هستید؟",
       onConfirm: async () => {
         setIsConfirmModalOpen(false);
-        setcancelUse((prev) => ({ ...prev, [id]: true }));
+        setcancelUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
             `${process.env.NEXT_PUBLIC_API_URL}/score/cancel-use`,
             {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ usedScoreId: id }),
+              body: JSON.stringify({ referenceCode }),
               credentials: "include",
             }
           );
           const json = await res.json();
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
-            setcancelUse((prev) => ({ ...prev, [id]: false }));
+            setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
             await fillData(Number(nationalCode));
           } else {
             toast.error("خطا در عملیات!");
@@ -188,7 +189,7 @@ export default function Home() {
         } catch (e) {
           toast.error("خطا در عملیات!");
         } finally {
-          setcancelUse((prev) => ({ ...prev, [id]: false }));
+          setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
         }
       },
     });
@@ -454,7 +455,7 @@ export default function Home() {
                                       // }
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        acceptUse(u.id);
+                                        acceptUse(u.referenceCode!);
                                       }}
                                     >
                                       {saveUse[u.id] ? (
@@ -471,7 +472,7 @@ export default function Home() {
                                       // }
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        cancelUse(u.id);
+                                        cancelUse(u.referenceCode!);
                                       }}
                                     >
                                       {calcleUse[u.id] ? (

@@ -23,7 +23,7 @@ import { FrontScoreService } from '../provider/front-score.service';
 
 @Controller('score')
 export class FrontScoreController {
-  constructor(private readonly frontScoreService: FrontScoreService) {}
+  constructor(private readonly frontScoreService: FrontScoreService) { }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.view', 'score.confirm', 'score.branch')
@@ -59,15 +59,15 @@ export class FrontScoreController {
   acceptUsedScoreFront(
     @GetUser() user: User,
     @Body(
-      'usedScoreId',
+      'referenceCode',
       new ParseIntPipe({
         exceptionFactory: (error) =>
           new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
       }),
     )
-    usedScoreId: number,
+    referenceCode: number,
   ) {
-    return this.frontScoreService.acceptUsedScoreFront(usedScoreId, user);
+    return this.frontScoreService.acceptUsedScoreFront(referenceCode, user);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
@@ -77,14 +77,14 @@ export class FrontScoreController {
   cancleUsedScoreFront(
     @GetUser() user: User,
     @Body(
-      'usedScoreId',
+      'referenceCode',
       new ParseIntPipe({
         exceptionFactory: (error) =>
           new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
       }),
     )
-    usedScoreId: number,
+    referenceCode: number,
   ) {
-    return this.frontScoreService.cancleUsedScoreFront(usedScoreId, user);
+    return this.frontScoreService.cancleUsedScoreFront(referenceCode, user);
   }
 }

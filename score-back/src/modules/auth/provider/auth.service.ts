@@ -64,7 +64,7 @@ export class AuthService {
     }
 
     const userData = await this.verifyToken(tokenFromSSO.data.access_token);
-    const personelData = await this.getPersonnelData(userData.username);
+    const personelData = await this.getPersonalData(userData.username);
 
     const { cookieOptions } = await this.createOption(exp);
     response.cookie(
@@ -238,7 +238,7 @@ export class AuthService {
     }
   }
 
-  async getPersonnelData(personelCode: number) {
+  async getPersonalData(personelCode: number) {
     try {
       const AFRA_URL = this.configService.get<string>('AFRA_URL');
       const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
@@ -262,7 +262,7 @@ export class AuthService {
         error,
         this.eventEmitter,
         'score.service',
-        'getPersonnelData',
+        'getPersonalData',
         { personelCode },
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);

@@ -11,10 +11,20 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateUseScoreDto {
-  
+
   @IsNotEmpty()
-  @IsNumber()
-  scoreId: number;
+  @IsString()
+  @Matches(/^\d+$/, { message: 'شماره حساب باید عددی باشد' })
+  @MaxLength(14)
+  @MinLength(5)
+  accountNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^\d+$/, { message: 'کد ملی باید عددی باشد' })
+  @MaxLength(10)
+  @MinLength(5)
+  nationalCode: string;
 
   @IsNotEmpty()
   @IsInt()

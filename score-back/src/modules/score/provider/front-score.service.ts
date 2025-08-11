@@ -76,7 +76,7 @@ export class FrontScoreService {
                 'MAX(usedScore.createdAt) as createdAt',
                 'MAX(usedScore.updatedAt) as updatedAt',
                 'MAX(usedScore.personalCode) as personalCode',
-                'CAST(MAX(CAST(usedScore.status as INT)) as BIT) as status',
+                'CAST(MIN(CAST(usedScore.status as INT)) as BIT) as status',
                 'MAX(usedScore.branchCode) as branchCode',
               ])
               .where('usedScore.usedScore = :itemId', { itemId: item.id })
@@ -109,13 +109,25 @@ export class FrontScoreService {
             }
           }
         }
+
+        const grouped = Object.values(
+          usedScore.reduce((acc, item) => {
+            if (!acc[item.referenceCode]) {
+              // clone the object so we don’t mutate original
+              acc[item.referenceCode] = { ...item, score: Number(item.score) };
+            } else {
+              acc[item.referenceCode].score += Number(item.score);
+            }
+            return acc;
+          }, {} as Record<string, any>)
+        );
         scoresRec.push({
           accountNumber: score.accountNumber,
           usableScore: score.usableScore,
           transferableScore: score.transferableScore,
           depositType: '1206',
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
-          usedScore: usedScore,
+          usedScore: grouped,
         });
       }
       let fullName: string = '';

@@ -82,6 +82,18 @@ export class SharedProvider {
     referenceCode: number | null,
   ) {
     try {
+
+      const now = new Date();
+      const formattedDate = now
+        .toISOString()
+        .slice(2, 10) // skip "20", take "25-MM-DD"
+        .replace(/-/g, ''); // YYMMDD
+
+      const timePart = now
+        .toTimeString() // "16:42:05 GMT+0200 ..."
+        .slice(0, 8)    // "16:42:05"
+        .replace(/:/g, ''); // "164205"
+
       if (Number(scoreRec.usableScore) < score) {
         this.eventEmitter.emit(
           'logEvent',
@@ -128,7 +140,7 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode,
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
           });
           UseScore.push(localUseScore)
         }
@@ -141,7 +153,7 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode,
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
           });
           remaindscore = 0
           UseScore.push(localUseScore)

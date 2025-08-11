@@ -105,7 +105,7 @@ export class ApiScoreService {
     ip: string,
     referenceCode: number | null,
   ) {
-    let scoreRec: Partial<ScoreInterface>[] | null;
+    let scoreRec: Partial<ScoreInterface> | null;
 
     try {
       if (
@@ -203,7 +203,7 @@ export class ApiScoreService {
         'exec getScores @nationalCode=@0,@accountNumber=@1',
         [fromNationalCode, fromAccountNumber],
       );
-      if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
+      if (!scoreRec || !scoreRec[0]?.id) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
@@ -229,7 +229,7 @@ export class ApiScoreService {
           error: 'Not Found',
         });
       }
-      if (scoreRec[0].transferableScore! < score) {
+      if (Number(scoreRec.transferableScore) < score) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
@@ -353,12 +353,12 @@ export class ApiScoreService {
       }
     } catch (error) { }
 
-    const scoreRec: Partial<ScoreInterface>[] | null =
+    const scoreRec: ScoreInterface =
       await this.scoreRepository.query(
         'exec getScores @nationalCode=@0,@accountNumber=@1',
         [nationalCode, accountNumber],
       );
-    if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
+    if (!scoreRec || !scoreRec[0]?.id) {
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({

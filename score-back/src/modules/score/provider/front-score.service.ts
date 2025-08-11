@@ -151,16 +151,16 @@ export class FrontScoreService {
     //   id: createUseScoreDto.scoreId,
     // });
 
-    const scoreRec = await this.sharedProvider.getValidScores(Number(createUseScoreDto.accountNumber), Number(createUseScoreDto.nationalCode))
+    const scoreRec = await this.sharedProvider.getScore(Number(createUseScoreDto.accountNumber), Number(createUseScoreDto.nationalCode))
 
-    if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
+    if (!scoreRec || scoreRec.length === 0) {
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'usedScoreForFront',
-          message: 'ُThere is no record for given nationalCode and accountNumber',
+          message: `There is no record for nationalCode:${createUseScoreDto.nationalCode} and accountNumber:${createUseScoreDto.accountNumber}`,
           requestBody: JSON.stringify({
             CreateUseScoreDto,
             user
@@ -175,13 +175,13 @@ export class FrontScoreService {
         error: 'Not Found',
       });
     }
-    const scoreRow = await this.scoreRepository.query(
-      'exec getScores @nationalCode=@0,@accountNumber=@1',
-      [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
-    );
+    // const scoreRow = await this.scoreRepository.query(
+    //   'exec getScores @nationalCode=@0,@accountNumber=@1',
+    //   [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
+    // );
 
     return this.sharedProvider.consumeScore(
-      scoreRow,
+      scoreRec[0],
       createUseScoreDto.score,
       Number(user.userName),
       null,

@@ -60,14 +60,29 @@ export class SharedProvider {
     }
   }
 
+  async getScore(accountNumber: number, nationalCode: number) {
+    try {
+      const query = `SELECT * FROM dbo.getScoresFunction(@0,@1,@2,@3)`;
+      const scoreRecs = await this.dataSource.query(query, [
+        accountNumber,
+        nationalCode,
+        Number(this.staleMonths),
+        0,
+      ]);
+      return scoreRecs;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async consumeScore(
-    scoreRec: Partial<ScoreInterface>[] | null,
+    scoreRec: ScoreInterface,
     score: number,
     personalCode: number,
     referenceCode: number | null,
   ) {
     try {
-      if (scoreRec[0].usableScore! < score) {
+      if (Number(scoreRec.usableScore) < score) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
@@ -76,12 +91,12 @@ export class SharedProvider {
             method: 'consumeScore',
             message: 'Insufficient score to use',
             requestBody: JSON.stringify({
-              scoreId: scoreRec[0]?.id,
+              scoreId: scoreRec?.id,
               personalCode,
               referenceCode,
-              nationalCode: scoreRec[0].nationalCode,
-              accountNumber: scoreRec[0].accountNumber,
-              usableScore: scoreRec[0].usableScore,
+              nationalCode: scoreRec.nationalCode,
+              accountNumber: scoreRec.accountNumber,
+              usableScore: scoreRec.usableScore,
               requestScore: score,
             }),
             stack: '',
@@ -94,20 +109,55 @@ export class SharedProvider {
         });
       }
       let personnelData: any = null;
-
+      let UseScore: any[] = []
       if (personalCode)
         personnelData = await this.authService.getPersonalData(personalCode);
+      let remaindscore = score
+      const validScores = await this.getValidScores(Number(scoreRec.accountNumber), Number(scoreRec.nationalCode))
 
-      const UseScore = this.UsedScoreRepository.create({
-        usedScore: { id: scoreRec[0].id },
-        score: score,
-        personalCode: personalCode ? Number(personalCode) : null,
-        branchCode: personnelData?.branchCode
-          ? Number(personnelData?.branchCode)
-          : null,
-        branchName: personnelData?.branchName ?? null,
-        referenceCode: referenceCode,
-      });
+      for (const validScore of validScores) {
+        if (remaindscore === 0)
+          break;
+        if (Number(validScore.usableScore) <= remaindscore) {
+          remaindscore -= Number(validScore.usableScore)
+          const localUseScore = this.UsedScoreRepository.create({
+            usedScore: { id: validScore.id },
+            score: Number(validScore.usableScore),
+            personalCode: personalCode ? Number(personalCode) : null,
+            branchCode: personnelData?.branchCode
+              ? Number(personnelData?.branchCode)
+              : null,
+            branchName: personnelData?.branchName ?? null,
+            referenceCode: referenceCode,
+          });
+          UseScore.push(localUseScore)
+        }
+        else {
+          const localUseScore = this.UsedScoreRepository.create({
+            usedScore: { id: validScore.id },
+            score: remaindscore,
+            personalCode: personalCode ? Number(personalCode) : null,
+            branchCode: personnelData?.branchCode
+              ? Number(personnelData?.branchCode)
+              : null,
+            branchName: personnelData?.branchName ?? null,
+            referenceCode: referenceCode,
+          });
+          remaindscore = 0
+          UseScore.push(localUseScore)
+        }
+      }
+
+      // const UseScore = this.UsedScoreRepository.create({
+      //   usedScore: { id: scoreRec.id },
+      //   score: score,
+      //   personalCode: personalCode ? Number(personalCode) : null,
+      //   branchCode: personnelData?.branchCode
+      //     ? Number(personnelData?.branchCode)
+      //     : null,
+      //   branchName: personnelData?.branchName ?? null,
+      //   referenceCode: referenceCode,
+      // });
       await this.UsedScoreRepository.save(UseScore);
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {

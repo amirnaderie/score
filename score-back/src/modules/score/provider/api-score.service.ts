@@ -25,7 +25,7 @@ const moment = require('moment-jalaali');
 @Injectable()
 export class ApiScoreService {
   private staleMonths: string;
-
+  private validDepositTypes: string;
   constructor(
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,
@@ -41,6 +41,7 @@ export class ApiScoreService {
     private readonly dataSource: DataSource,
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+    this.validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
   }
 
   public async findByNationalCode(nationalCode: number) {
@@ -149,20 +150,42 @@ export class ApiScoreService {
         });
       }
 
-      try {
-        const scoreFromOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+     
         const scoreToOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+        const scoreFromOwner =
           await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
         const { depositStatus: depositStatusFrom } =
           await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
             fromAccountNumber,
           ]);
-        const { depositStatus: depositStatusTo,depositTypeTo  } =
+        const { depositStatus: depositStatusTo, depositType: depositTypeTo } =
           await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
             toAccountNumber,
           ]);
+        const validDepositTypes = this.validDepositTypes.split(",");
+        if (validDepositTypes.findIndex(item => item.toString() === depositTypeTo.toString()) < 0) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `the Account ${toAccountNumber} is not valid type to transfer score`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
+            }),
+          );
 
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
         if (depositStatusFrom !== 'OPEN' || depositStatusTo !== 'OPEN') {
           this.eventEmitter.emit(
             'logEvent',
@@ -185,7 +208,7 @@ export class ApiScoreService {
             error: 'Bad Request',
           });
         }
-      } catch (error) { }
+     
 
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({

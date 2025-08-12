@@ -13,6 +13,7 @@ export class BankCoreProvider {
   private depositUrl: string;
   private getCustomerDetail: string;
   private apiKey: string;
+
   private expiration: string;
   private userName: string;
   private password: string;
@@ -32,7 +33,7 @@ export class BankCoreProvider {
     this.apiKey = this.configService.get<string>('BANKCORE_API_KEY');
     this.userName = this.configService.get<string>('BANKCORE_USERNAME');
     this.password = this.configService.get<string>('BANKCORE_PASSWORD');
-    this.expiration = this.configService.get<string>(
+     this.expiration = this.configService.get<string>(
       'BANKCORE_SESSIONID_EXPIRATION',
     );
   }
@@ -158,7 +159,7 @@ export class BankCoreProvider {
         url,
         {
           cif: cif.toString(),
-          depositNumber: depositNumber.map((d) => d.toString()),
+          depositNumbers: depositNumber.map((d) => d.toString()),
         },
         {
           headers: {

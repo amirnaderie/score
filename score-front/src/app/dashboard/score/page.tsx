@@ -98,7 +98,7 @@ export default function Home() {
   ) => {
     try {
       const res = await fetchWithAuthClient(
-        `${process.env.NEXT_PUBLIC_API_URL}/score/${nationalCode}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/front/score/${nationalCode}`,
         {
           credentials: "include",
         }
@@ -139,7 +139,7 @@ export default function Home() {
         setSaveUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
-            `${process.env.NEXT_PUBLIC_API_URL}/score/accept-use`,
+            `${process.env.NEXT_PUBLIC_API_URL}/front/score/accept-use`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -173,7 +173,7 @@ export default function Home() {
         setcancelUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
-            `${process.env.NEXT_PUBLIC_API_URL}/score/cancel-use`,
+            `${process.env.NEXT_PUBLIC_API_URL}/front/score/cancel-use`,
             {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
@@ -218,7 +218,7 @@ export default function Home() {
     }
     try {
       const res = await fetchWithAuthClient(
-        `${process.env.NEXT_PUBLIC_API_URL}/score/consume`,
+        `${process.env.NEXT_PUBLIC_API_URL}/front/score/consume`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

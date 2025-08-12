@@ -21,7 +21,7 @@ import { GetUser } from 'src/decorators/getUser.decorator';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { FrontScoreService } from '../provider/front-score.service';
 
-@Controller('score')
+@Controller('front/score')
 export class FrontScoreController {
   constructor(private readonly frontScoreService: FrontScoreService) { }
 

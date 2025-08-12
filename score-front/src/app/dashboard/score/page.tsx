@@ -84,7 +84,7 @@ export default function Home() {
         setLoading(false);
         return;
       }
-      await fillData(Number(nationalCode),selectedIndex);
+      await fillData(Number(nationalCode), 0);
     } catch (e) {
       toast.error("خطا در عملیات!");
     } finally {
@@ -94,7 +94,7 @@ export default function Home() {
 
   const fillData = async (
     nationalCode: number,
-    selectedScore: number | null = 0
+    selectedScore: number | null
   ) => {
     try {
       const res = await fetchWithAuthClient(
@@ -185,7 +185,7 @@ export default function Home() {
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
             setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
-            await fillData(Number(nationalCode),selectedIndex);
+            await fillData(Number(nationalCode), selectedIndex);
           } else {
             toast.error("خطا در عملیات!");
           }
@@ -234,7 +234,7 @@ export default function Home() {
       if (json.statusCode === 200) {
         toast.success("عملیات با موفقیت انجام پذیرفت");
         //setSaveMsg((prev) => ({ ...prev, [accountNumber]: "Saved!" }));
-        await fillData(Number(nationalCode),selectedIndex);
+        await fillData(Number(nationalCode), selectedIndex);
       } else {
         // setSaveMsg((prev) => ({
         //   ...prev,

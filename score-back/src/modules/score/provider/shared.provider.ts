@@ -11,6 +11,7 @@ import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { LogEvent } from 'src/modules/event/providers/log.event';
 import { Score } from '../entities/score.entity';
 import { ConfigService } from '@nestjs/config';
+import { TransferScore } from '../entities/transfer-score.entity';
 
 @Injectable()
 export class SharedProvider {
@@ -25,6 +26,8 @@ export class SharedProvider {
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
     private readonly dataSource: DataSource,
+    @InjectRepository(TransferScore)
+    private readonly transferScoreRepository: Repository<TransferScore>,
 
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
@@ -90,7 +93,7 @@ export class SharedProvider {
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
+            fileName: 'shared.provider',
             method: 'usedScore',
             message:
               `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
@@ -127,7 +130,7 @@ export class SharedProvider {
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
+            fileName: 'shared.provider',
             method: 'consumeScore',
             message: 'Insufficient score to use',
             requestBody: JSON.stringify({
@@ -191,6 +194,25 @@ export class SharedProvider {
       }
 
       await this.UsedScoreRepository.save(UseScore);
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'shared.provider',
+          method: 'consumeScore',
+          message: `use successfully nationalCode:${scoreRec.nationalCode} accountNumber:${scoreRec.accountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode}`,
+          requestBody: JSON.stringify({
+            scoreId: scoreRec?.id,
+            personalCode,
+            referenceCode,
+            nationalCode: scoreRec.nationalCode,
+            accountNumber: scoreRec.accountNumber,
+            usableScore: scoreRec.usableScore,
+            requestScore: score,
+          }),
+          stack: '',
+        }),
+      );
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
       handelError(error, this.eventEmitter, 'score.service', 'consumeScore', {
@@ -203,13 +225,46 @@ export class SharedProvider {
   }
 
   async transferScore(
-    scoreRec: ScoreInterface,
+    fromNationalCode: number,
+    toNationalCode: number,
+    fromAccountNumber: number,
+    toAccountNumber: number,
     score: number,
     personalCode: number,
     referenceCode: number | null,
   ) {
     try {
+      const resultScores = await this.getScore(fromAccountNumber, fromNationalCode)
 
+      if (!resultScores || resultScores.length === 0) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'shared.provider',
+            method: 'transferScore',
+            message:
+              `There is no record in Scores for nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber}`,
+            requestBody: JSON.stringify({
+              fromNationalCode,
+              fromAccountNumber,
+              toAccountNumber,
+              toNationalCode,
+              score,
+              personalCode,
+              referenceCode,
+            }),
+            stack: '',
+          }),
+        );
+        //throw new NotFoundException(ErrorMessages.NOT_FOUND);
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
+      }
+      const scoreRec = resultScores[0]
       const now = new Date();
       const formattedDate = now
         .toISOString()
@@ -221,14 +276,14 @@ export class SharedProvider {
         .slice(0, 8)    // "16:42:05"
         .replace(/:/g, '')).toString(); // "164205"
 
-      if (Number(scoreRec.usableScore) < score) {
+      if (Number(scoreRec.transferableScore) < score) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'consumeScore',
-            message: 'Insufficient score to use',
+            fileName: 'shared.provider',
+            method: 'transferScore',
+            message: `Insufficient score to transfer from nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} and accountNumber:${toAccountNumber} currentScore is:${scoreRec.usableScore} and requestScore is ${score}`,
             requestBody: JSON.stringify({
               scoreId: scoreRec?.id,
               personalCode,
@@ -248,7 +303,6 @@ export class SharedProvider {
         });
       }
       let personnelData: any = null;
-      let UseScore: any[] = []
       if (personalCode)
         personnelData = await this.authService.getPersonalData(personalCode);
       let remaindscore = score
@@ -257,43 +311,82 @@ export class SharedProvider {
       for (const validScore of validScores) {
         if (remaindscore === 0)
           break;
-        if (Number(validScore.usableScore) === 0)
+        if (Number(validScore.transferableScore) === 0)
           continue;
-        if (Number(validScore.usableScore) <= remaindscore) {
-          remaindscore -= Number(validScore.usableScore)
-          const localUseScore = this.UsedScoreRepository.create({
-            usedScore: { id: validScore.id },
-            score: Number(validScore.usableScore),
+        if (Number(validScore.transferableScore) <= remaindscore) {
+          remaindscore -= Number(validScore.transferableScore)
+          const localScore = this.scoreRepository.create({
+            accountNumber: toAccountNumber,
+            nationalCode: toNationalCode,
+            score: 0,
+            updatedAt: validScore.updated_at,
+          });
+          const savedScore = await this.scoreRepository.save(localScore)
+
+          const localTransferScore = this.transferScoreRepository.create({
+            fromScore: { id: validScore.id },
+            toScore: { id: savedScore.id },
+            score: validScore.transferableScore,
             personalCode: personalCode ? Number(personalCode) : null,
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            branchName: personnelData?.branchName ?? null,
             referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
           });
-          UseScore.push(localUseScore)
+          await this.transferScoreRepository.save(localTransferScore)
         }
         else {
-          const localUseScore = this.UsedScoreRepository.create({
-            usedScore: { id: validScore.id },
+          const localScore = this.scoreRepository.create({
+            accountNumber: toAccountNumber,
+            nationalCode: toNationalCode,
+            score: 0,
+            updatedAt: validScore.updated_at,
+          });
+          const savedScore = await this.scoreRepository.save(localScore)
+
+          const localTransferScore = this.transferScoreRepository.create({
+            fromScore: { id: validScore.id },
+            toScore: { id: savedScore.id },
             score: remaindscore,
             personalCode: personalCode ? Number(personalCode) : null,
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            branchName: personnelData?.branchName ?? null,
             referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
           });
+          await this.transferScoreRepository.save(localTransferScore)
           remaindscore = 0
-          UseScore.push(localUseScore)
         }
       }
-
-      await this.UsedScoreRepository.save(UseScore);
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'shared.provider',
+          method: 'transferScore',
+          message: `transfer score successfully nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} accountNumber:${toAccountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode}`,
+          requestBody: JSON.stringify({
+            scoreId: scoreRec?.id,
+            personalCode,
+            referenceCode,
+            nationalCode: scoreRec.nationalCode,
+            accountNumber: scoreRec.accountNumber,
+            usableScore: scoreRec.usableScore,
+            requestScore: score,
+          }),
+          stack: '',
+        }),
+      );
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
-      handelError(error, this.eventEmitter, 'score.service', 'consumeScore', {
-        scoreId: scoreRec[0]?.id,
+      handelError(error, this.eventEmitter, 'shared.provider', 'transferScore', {
+        fromNationalCode,
+        fromAccountNumber,
+        toNationalCode,
+        toAccountNumber,
+        score,
+        personalCode,
+        referenceCode,
       });
     }
   }

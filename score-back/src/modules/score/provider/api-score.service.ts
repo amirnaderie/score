@@ -32,7 +32,7 @@ export class ApiScoreService {
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
     @InjectRepository(TransferScore)
-    private readonly TransferScoreRepository: Repository<TransferScore>,
+    private readonly transferScoreRepository: Repository<TransferScore>,
     @InjectRepository(UsedScore)
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
@@ -105,7 +105,6 @@ export class ApiScoreService {
     ip: string,
     referenceCode: number | null,
   ) {
-    let scoreRec: Partial<ScoreInterface> | null;
 
     try {
       if (
@@ -117,7 +116,9 @@ export class ApiScoreService {
             logTypes: logTypes.INFO,
             fileName: 'score.service',
             method: 'transferScore',
-            message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
+            message: `transfer score overflow max transferable score maxTransferableScore:${this.configService.get<string>(
+              'MAX_TRANSFERABLE_SCORE',
+            )}`,
             requestBody: JSON.stringify({
               fromNationalCode,
               fromAccountNumber,
@@ -138,7 +139,7 @@ export class ApiScoreService {
       }
 
       if (
-        fromNationalCode === toNationalCode ||
+        fromNationalCode === toNationalCode &&
         fromAccountNumber === toAccountNumber
       ) {
         throw new BadRequestException({
@@ -168,7 +169,7 @@ export class ApiScoreService {
               logTypes: logTypes.INFO,
               fileName: 'score.service',
               method: 'transferScore',
-              message: `fromAccountNumber or toAccountNumber is close`,
+              message: `fromAccountNumber:${fromAccountNumber} or toAccountNumber:${toAccountNumber} is close`,
               requestBody: JSON.stringify({
                 fromAccountNumber,
                 toAccountNumber,
@@ -186,7 +187,7 @@ export class ApiScoreService {
       } catch (error) { }
 
       if (referenceCode) {
-        const foundReferenceCode = await this.TransferScoreRepository.findOne({
+        const foundReferenceCode = await this.transferScoreRepository.findOne({
           where: {
             referenceCode,
           },
@@ -199,100 +200,8 @@ export class ApiScoreService {
           });
       }
 
-      scoreRec = await this.scoreRepository.query(
-        'exec getScores @nationalCode=@0,@accountNumber=@1',
-        [fromNationalCode, fromAccountNumber],
-      );
-      if (!scoreRec || !scoreRec[0]?.id) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message:
-              'ُThere is no record for given fromNationalCode and fromAccountNumber',
-            requestBody: JSON.stringify({
-              fromNationalCode,
-              fromAccountNumber,
-              toNationalCode,
-              toAccountNumber,
-              score,
-              referenceCode: referenceCode ? referenceCode : null,
-            }),
-            stack: '',
-          }),
-        );
-        throw new NotFoundException({
-          message: ErrorMessages.SENDER_NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Not Found',
-        });
-      }
-      if (Number(scoreRec.transferableScore) < score) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message: 'Insufficient score to transfer',
-            requestBody: JSON.stringify({
-              fromNationalCode,
-              fromAccountNumber,
-              toNationalCode,
-              toAccountNumber,
-              score,
-              referenceCode: referenceCode ? referenceCode : null,
-            }),
-            stack: '',
-          }),
-        );
-        throw new BadRequestException({
-          message: ErrorMessages.INSUFFICIENT_SCORE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
-      const toRec = await this.scoreRepository.findOne({
-        where: {
-          nationalCode: toNationalCode,
-          accountNumber: toAccountNumber,
-        },
-      });
-      if (!toRec) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message:
-              'ُThere is no record for given toNationalCode and toAccountNumber',
-            requestBody: JSON.stringify({
-              toNationalCode,
-              toAccountNumber,
-              score,
-            }),
-            stack: '',
-          }),
-        );
-        throw new NotFoundException({
-          message: ErrorMessages.RECIEVER_NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Not Found',
-        });
-      }
+      return this.sharedProvider.transferScore(fromNationalCode, toNationalCode, fromAccountNumber, toAccountNumber, score, 0, referenceCode);
 
-      const TransferScore = this.TransferScoreRepository.create({
-        fromScore: { id: scoreRec[0].id },
-        toScore: { id: toRec.id },
-        score,
-        personalCode: null,
-        branchCode: null,
-        referenceCode,
-      });
-      await this.TransferScoreRepository.save(TransferScore);
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
       handelError(error, this.eventEmitter, 'score.service', 'transferScore', {
@@ -421,7 +330,7 @@ export class ApiScoreService {
         error: 'Not Found',
       });
 
-    const TransferScoreRec = await this.TransferScoreRepository.find({
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         fromScore: { id: coresRec.id },
       },
@@ -461,7 +370,7 @@ export class ApiScoreService {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
-    const TransferScoreRec = await this.TransferScoreRepository.find({
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         toScore: { id: coresRec.id },
       },
@@ -485,7 +394,7 @@ export class ApiScoreService {
   }
 
   async getTransferByReferenceCode(referenceCode: number) {
-    const TransferScoreRec = await this.TransferScoreRepository.find({
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         referenceCode,
       },

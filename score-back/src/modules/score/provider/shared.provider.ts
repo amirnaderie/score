@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, HttpStatus } from '@nestjs/common';
+import { Injectable, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { UsedScore } from '../entities/used-score.entity';
@@ -76,12 +76,40 @@ export class SharedProvider {
   }
 
   async consumeScore(
-    scoreRec: ScoreInterface,
+    nationalCode: number,
+    accountNumber: number,
     score: number,
     personalCode: number,
     referenceCode: number | null,
   ) {
     try {
+      const resultScores = await this.getScore(accountNumber, nationalCode)
+
+      if (!resultScores || resultScores.length === 0) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'usedScore',
+            message:
+              `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
+            requestBody: JSON.stringify({
+              nationalCode,
+              accountNumber,
+              score,
+            }),
+            stack: '',
+          }),
+        );
+        //throw new NotFoundException(ErrorMessages.NOT_FOUND);
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
+      }
+      const scoreRec = resultScores[0]
 
       const now = new Date();
       const formattedDate = now
@@ -89,10 +117,10 @@ export class SharedProvider {
         .slice(2, 10) // skip "20", take "25-MM-DD"
         .replace(/-/g, ''); // YYMMDD
 
-      const timePart = now
+      const timePart = Number(now
         .toTimeString() // "16:42:05 GMT+0200 ..."
         .slice(0, 8)    // "16:42:05"
-        .replace(/:/g, ''); // "164205"
+        .replace(/:/g, '')).toString(); // "164205"
 
       if (Number(scoreRec.usableScore) < score) {
         this.eventEmitter.emit(
@@ -130,6 +158,8 @@ export class SharedProvider {
       for (const validScore of validScores) {
         if (remaindscore === 0)
           break;
+        if (Number(validScore.usableScore) === 0)
+          continue;
         if (Number(validScore.usableScore) <= remaindscore) {
           remaindscore -= Number(validScore.usableScore)
           const localUseScore = this.UsedScoreRepository.create({
@@ -160,16 +190,105 @@ export class SharedProvider {
         }
       }
 
-      // const UseScore = this.UsedScoreRepository.create({
-      //   usedScore: { id: scoreRec.id },
-      //   score: score,
-      //   personalCode: personalCode ? Number(personalCode) : null,
-      //   branchCode: personnelData?.branchCode
-      //     ? Number(personnelData?.branchCode)
-      //     : null,
-      //   branchName: personnelData?.branchName ?? null,
-      //   referenceCode: referenceCode,
-      // });
+      await this.UsedScoreRepository.save(UseScore);
+      return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
+    } catch (error) {
+      handelError(error, this.eventEmitter, 'score.service', 'consumeScore', {
+        nationalCode,
+        accountNumber,
+        score,
+        personalCode,
+      });
+    }
+  }
+
+  async transferScore(
+    scoreRec: ScoreInterface,
+    score: number,
+    personalCode: number,
+    referenceCode: number | null,
+  ) {
+    try {
+
+      const now = new Date();
+      const formattedDate = now
+        .toISOString()
+        .slice(2, 10) // skip "20", take "25-MM-DD"
+        .replace(/-/g, ''); // YYMMDD
+
+      const timePart = Number(now
+        .toTimeString() // "16:42:05 GMT+0200 ..."
+        .slice(0, 8)    // "16:42:05"
+        .replace(/:/g, '')).toString(); // "164205"
+
+      if (Number(scoreRec.usableScore) < score) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'consumeScore',
+            message: 'Insufficient score to use',
+            requestBody: JSON.stringify({
+              scoreId: scoreRec?.id,
+              personalCode,
+              referenceCode,
+              nationalCode: scoreRec.nationalCode,
+              accountNumber: scoreRec.accountNumber,
+              usableScore: scoreRec.usableScore,
+              requestScore: score,
+            }),
+            stack: '',
+          }),
+        );
+        throw new BadRequestException({
+          message: ErrorMessages.INSUFFICIENT_SCORE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+      let personnelData: any = null;
+      let UseScore: any[] = []
+      if (personalCode)
+        personnelData = await this.authService.getPersonalData(personalCode);
+      let remaindscore = score
+      const validScores = await this.getValidScores(Number(scoreRec.accountNumber), Number(scoreRec.nationalCode))
+
+      for (const validScore of validScores) {
+        if (remaindscore === 0)
+          break;
+        if (Number(validScore.usableScore) === 0)
+          continue;
+        if (Number(validScore.usableScore) <= remaindscore) {
+          remaindscore -= Number(validScore.usableScore)
+          const localUseScore = this.UsedScoreRepository.create({
+            usedScore: { id: validScore.id },
+            score: Number(validScore.usableScore),
+            personalCode: personalCode ? Number(personalCode) : null,
+            branchCode: personnelData?.branchCode
+              ? Number(personnelData?.branchCode)
+              : null,
+            branchName: personnelData?.branchName ?? null,
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+          });
+          UseScore.push(localUseScore)
+        }
+        else {
+          const localUseScore = this.UsedScoreRepository.create({
+            usedScore: { id: validScore.id },
+            score: remaindscore,
+            personalCode: personalCode ? Number(personalCode) : null,
+            branchCode: personnelData?.branchCode
+              ? Number(personnelData?.branchCode)
+              : null,
+            branchName: personnelData?.branchName ?? null,
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+          });
+          remaindscore = 0
+          UseScore.push(localUseScore)
+        }
+      }
+
       await this.UsedScoreRepository.save(UseScore);
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {

@@ -84,7 +84,7 @@ export default function Home() {
         setLoading(false);
         return;
       }
-      await fillData(Number(nationalCode));
+      await fillData(Number(nationalCode),selectedIndex);
     } catch (e) {
       toast.error("خطا در عملیات!");
     } finally {
@@ -92,7 +92,10 @@ export default function Home() {
     }
   };
 
-  const fillData = async (nationalCode: number) => {
+  const fillData = async (
+    nationalCode: number,
+    selectedScore: number | null = 0
+  ) => {
     try {
       const res = await fetchWithAuthClient(
         `${process.env.NEXT_PUBLIC_API_URL}/score/${nationalCode}`,
@@ -111,7 +114,7 @@ export default function Home() {
           (scoresData as any)[0].usedScore &&
           (scoresData as any)[0].usedScore.length > 0
         ) {
-          setSelectedIndex(0);
+          setSelectedIndex(selectedScore ?? 0);
         }
         setData(scoresData);
         setownerFullName(ownerName);
@@ -148,7 +151,7 @@ export default function Home() {
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
             setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
-            await fillData(Number(nationalCode));
+            await fillData(Number(nationalCode), selectedIndex);
           } else {
             toast.error("خطا در عملیات!");
           }
@@ -182,7 +185,7 @@ export default function Home() {
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
             setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
-            await fillData(Number(nationalCode));
+            await fillData(Number(nationalCode),selectedIndex);
           } else {
             toast.error("خطا در عملیات!");
           }
@@ -231,7 +234,7 @@ export default function Home() {
       if (json.statusCode === 200) {
         toast.success("عملیات با موفقیت انجام پذیرفت");
         //setSaveMsg((prev) => ({ ...prev, [accountNumber]: "Saved!" }));
-        await fillData(Number(nationalCode));
+        await fillData(Number(nationalCode),selectedIndex);
       } else {
         // setSaveMsg((prev) => ({
         //   ...prev,

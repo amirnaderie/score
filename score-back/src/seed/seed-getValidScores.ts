@@ -26,7 +26,7 @@ RETURN
     FROM dbo.getValidScoresFunction(@accountNumber, @nationalCode, @expirationMonth, @currentDate)
 );
 
-ALTER   FUNCTION [dbo].[getValidScoresFunction]
+create FUNCTION [dbo].[getValidScoresFunction]
 (
     @accountNumber BIGINT,
     @nationalCode BIGINT,
@@ -75,6 +75,7 @@ RETURN
               @expirationMonth
           )
       )
+	 
 );
 
 ALTER PROCEDURE [dbo].[getScoresOfNationalCode]

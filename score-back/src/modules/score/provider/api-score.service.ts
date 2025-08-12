@@ -315,6 +315,21 @@ export class ApiScoreService {
           referenceCode,
         },
       });
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'usedScore',
+          message: `The referenceCode:${referenceCode} is duplicate`,
+          requestBody: JSON.stringify({
+            nationalCode,
+            accountNumber,
+            score,
+          }),
+          stack: '',
+        }),
+      );
       if (foundReferenceCode)
         throw new ConflictException({
           message: ErrorMessages.REPETITIVE_INFO_FAILED,
@@ -335,8 +350,8 @@ export class ApiScoreService {
           new LogEvent({
             logTypes: logTypes.INFO,
             fileName: 'score.service',
-            method: 'consumeScore',
-            message: 'ُthe Account is not open',
+            method: 'usedScore',
+            message: `The Account:${accountNumber} is not open`,
             requestBody: JSON.stringify({
               nationalCode,
               accountNumber,
@@ -353,37 +368,39 @@ export class ApiScoreService {
       }
     } catch (error) { }
 
-    const scoreRec: ScoreInterface =
-      await this.scoreRepository.query(
-        'exec getScores @nationalCode=@0,@accountNumber=@1',
-        [nationalCode, accountNumber],
-      );
-    if (!scoreRec || !scoreRec[0]?.id) {
-      this.eventEmitter.emit(
-        'logEvent',
-        new LogEvent({
-          logTypes: logTypes.INFO,
-          fileName: 'score.service',
-          method: 'consumeScore',
-          message:
-            'ُThere is no record for given nationalCode and accountNumber',
-          requestBody: JSON.stringify({
-            nationalCode,
-            accountNumber,
-            score,
-          }),
-          stack: '',
-        }),
-      );
-      //throw new NotFoundException(ErrorMessages.NOT_FOUND);
-      throw new NotFoundException({
-        message: ErrorMessages.NOT_FOUND,
-        statusCode: HttpStatus.NOT_FOUND,
-        error: 'Not Found',
-      });
-    }
+    // const scoreRec: ScoreInterface =
+    //   await this.scoreRepository.query(
+    //     'exec getScores @nationalCode=@0,@accountNumber=@1',
+    //     [nationalCode, accountNumber],
+    //   );
+    // const scoreRec = await this.sharedProvider.getScore(accountNumber, nationalCode)
 
-    return this.sharedProvider.consumeScore(scoreRec, score, 0, referenceCode);
+    // if (!scoreRec || scoreRec.length === 0) {
+    //   this.eventEmitter.emit(
+    //     'logEvent',
+    //     new LogEvent({
+    //       logTypes: logTypes.INFO,
+    //       fileName: 'score.service',
+    //       method: 'usedScore',
+    //       message:
+    //         `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
+    //       requestBody: JSON.stringify({
+    //         nationalCode,
+    //         accountNumber,
+    //         score,
+    //       }),
+    //       stack: '',
+    //     }),
+    //   );
+    //   //throw new NotFoundException(ErrorMessages.NOT_FOUND);
+    //   throw new NotFoundException({
+    //     message: ErrorMessages.NOT_FOUND,
+    //     statusCode: HttpStatus.NOT_FOUND,
+    //     error: 'Not Found',
+    //   });
+    // }
+
+    return this.sharedProvider.consumeScore(nationalCode, accountNumber, score, 0, referenceCode);
   }
 
   async getTransferScoreFrom(

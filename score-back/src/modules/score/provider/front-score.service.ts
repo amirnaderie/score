@@ -65,69 +65,47 @@ export class FrontScoreService {
         const scoreRecs = await this.sharedProvider.getValidScores(score.accountNumber, nationalCode)
         let usedScore: any[] = [];
         if (scoreRecs && scoreRecs.length > 0) {
-          let usedRecs: any[] = [];
-          for (const item of scoreRecs) {
-            const usedRecs = await this.UsedScoreRepository
-              .createQueryBuilder('usedScore')
-              .select([
-                'MAX(usedScore.referenceCode) as referenceCode',
-                'usedScore.scoreId as scoreId',
-                'SUM(usedScore.score) as score',
-                'MAX(usedScore.createdAt) as createdAt',
-                'MAX(usedScore.updatedAt) as updatedAt',
-                'MAX(usedScore.personalCode) as personalCode',
-                'CAST(MIN(CAST(usedScore.status as INT)) as BIT) as status',
-                'MAX(usedScore.branchCode) as branchCode',
-              ])
-              .where('usedScore.usedScore = :itemId', { itemId: item.id })
-              .groupBy('usedScore.scoreId')
-              .orderBy('usedScore.scoreId', 'ASC')
-              .getRawMany();
+          const scoreIds = scoreRecs.map(rec => rec.id);
 
-            // usedRecs = await this.UsedScoreRepository.find({
-            //   where: {
-            //     usedScore: { id: item.id },
-            //   },
-            //   order: {
-            //     id: 'ASC', // or 'DESC' for descending order
-            //   },
-            // });
+          const usedRecs = await this.UsedScoreRepository
+            .createQueryBuilder('usedScore')
+            .select([
+              'usedScore.referenceCode as referenceCode',
+              'SUM(usedScore.score) as score',
+              'MAX(usedScore.createdAt) as createdAt',
+              'MAX(usedScore.updatedAt) as updatedAt',
+              'MAX(usedScore.personalCode) as personalCode',
+              'CAST(MIN(CAST(usedScore.status as INT)) as BIT) as status',
+              'MAX(usedScore.branchCode) as branchCode',
+            ])
+            .where('usedScore.scoreId IN (:...scoreIds)', { scoreIds })
+            .groupBy('usedScore.referenceCode')
+            .orderBy('MIN(usedScore.createdAt)', 'ASC')
+            .getRawMany();
 
-            if (usedRecs && usedRecs.length > 0) {
-              usedRecs.map((usedItem: UsedScore) => {
-                usedScore.push({
-                  referenceCode: usedItem.referenceCode,
-                  score: usedItem.score,
-                  createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
-                  updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
-                  status: usedItem.status,
-                  personalCode: usedItem.personalCode,
-                  branchCode: usedItem.branchCode,
-                  branchName: usedItem.branchName,
-                });
+          if (usedRecs && usedRecs.length > 0) {
+            usedRecs.map((usedItem: UsedScore) => {
+              usedScore.push({
+                referenceCode: usedItem.referenceCode,
+                score: usedItem.score,
+                createdAt: moment(usedItem.createdAt).format('jYYYY/jMM/jDD'),
+                updatedAt: moment(usedItem.updatedAt).format('jYYYY/jMM/jDD'),
+                status: usedItem.status,
+                personalCode: usedItem.personalCode,
+                branchCode: usedItem.branchCode,
+                branchName: usedItem.branchName,
               });
-            }
+            });
           }
+          // }
         }
-
-        const grouped = Object.values(
-          usedScore.reduce((acc, item) => {
-            if (!acc[item.referenceCode]) {
-              // clone the object so we don’t mutate original
-              acc[item.referenceCode] = { ...item, score: Number(item.score) };
-            } else {
-              acc[item.referenceCode].score += Number(item.score);
-            }
-            return acc;
-          }, {} as Record<string, any>)
-        );
         scoresRec.push({
           accountNumber: score.accountNumber,
           usableScore: score.usableScore,
           transferableScore: score.transferableScore,
           depositType: '1206',
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
-          usedScore: grouped,
+          usedScore: usedScore,
         });
       }
       let fullName: string = '';
@@ -163,37 +141,38 @@ export class FrontScoreService {
     //   id: createUseScoreDto.scoreId,
     // });
 
-    const scoreRec = await this.sharedProvider.getScore(Number(createUseScoreDto.accountNumber), Number(createUseScoreDto.nationalCode))
+    // const scoreRec = await this.sharedProvider.getScore(Number(createUseScoreDto.accountNumber), Number(createUseScoreDto.nationalCode))
 
-    if (!scoreRec || scoreRec.length === 0) {
-      this.eventEmitter.emit(
-        'logEvent',
-        new LogEvent({
-          logTypes: logTypes.INFO,
-          fileName: 'front-score.service',
-          method: 'usedScoreForFront',
-          message: `There is no record for nationalCode:${createUseScoreDto.nationalCode} and accountNumber:${createUseScoreDto.accountNumber}`,
-          requestBody: JSON.stringify({
-            CreateUseScoreDto,
-            user
-          }),
-          stack: '',
-        }),
-      );
-      throw new NotFoundException({
-        data: [],
-        message: ErrorMessages.NOT_FOUND,
-        statusCode: HttpStatus.NOT_FOUND,
-        error: 'Not Found',
-      });
-    }
+    // if (!scoreRec || scoreRec.length === 0) {
+    //   this.eventEmitter.emit(
+    //     'logEvent',
+    //     new LogEvent({
+    //       logTypes: logTypes.INFO,
+    //       fileName: 'front-score.service',
+    //       method: 'usedScoreForFront',
+    //       message: `There is no record for nationalCode:${createUseScoreDto.nationalCode} and accountNumber:${createUseScoreDto.accountNumber}`,
+    //       requestBody: JSON.stringify({
+    //         CreateUseScoreDto,
+    //         user
+    //       }),
+    //       stack: '',
+    //     }),
+    //   );
+    //   throw new NotFoundException({
+    //     data: [],
+    //     message: ErrorMessages.NOT_FOUND,
+    //     statusCode: HttpStatus.NOT_FOUND,
+    //     error: 'Not Found',
+    //   });
+    // }
     // const scoreRow = await this.scoreRepository.query(
     //   'exec getScores @nationalCode=@0,@accountNumber=@1',
     //   [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
     // );
 
     return this.sharedProvider.consumeScore(
-      scoreRec[0],
+      Number(createUseScoreDto.nationalCode),
+      Number(createUseScoreDto.accountNumber),
       createUseScoreDto.score,
       Number(user.userName),
       null,

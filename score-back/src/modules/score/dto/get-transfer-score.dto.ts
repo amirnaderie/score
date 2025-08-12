@@ -10,7 +10,7 @@ export class GetTransferScoreDto {
   @IsNotEmpty()
   @IsString()
   @Matches(/^\d+$/, { message: 'کد ملی باید عددی باشد' })
-  @MaxLength(10)
+  @MaxLength(11)
   @MinLength(5)
   nationalCode: string;
 

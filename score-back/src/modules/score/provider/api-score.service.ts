@@ -158,10 +158,11 @@ export class ApiScoreService {
           await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
             fromAccountNumber,
           ]);
-        const { depositStatus: depositStatusTo } =
+        const { depositStatus: depositStatusTo,depositTypeTo  } =
           await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
             toAccountNumber,
           ]);
+
         if (depositStatusFrom !== 'OPEN' || depositStatusTo !== 'OPEN') {
           this.eventEmitter.emit(
             'logEvent',

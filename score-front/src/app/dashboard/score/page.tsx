@@ -257,12 +257,12 @@ export default function Home() {
           <input
             type="number"
             className="border rounded px-3 py-2 flex-1 ltr w-4/6  placeholder:text-right placeholder:text-xs"
-            onInput={(e) => handleInput(e, 10)}
+            onInput={(e) => handleInput(e, 11)}
             value={nationalCode}
             autoFocus
             onChange={(e) => setNationalCode(e.target.value)}
             placeholder=" کد ملی صاحب امتیاز را وارد نمایید"
-            maxLength={10}
+            maxLength={11}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !loading && nationalCode) {
                 handleFetch();

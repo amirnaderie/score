@@ -16,7 +16,7 @@ export class CreateUseScoreDto {
   @IsString()
   @Matches(/^\d+$/, { message: 'شماره حساب باید عددی باشد' })
   @MaxLength(14)
-  @MinLength(5)
+  @MinLength(4)
   accountNumber: string;
 
   @IsNotEmpty()

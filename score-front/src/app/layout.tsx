@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "next-themes";
+import TipSvg from "@/assets/svgs/tipSvg";
 
 export const metadata: Metadata = {
   title: "مدیریت امتیاز",
@@ -13,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fa-IR" dir="rtl">
+    <html lang="fa-IR" suppressHydrationWarning dir="rtl">
       <head>
         <link rel="icon" href="/icon.png" type="image/png" />
       </head>
@@ -25,6 +27,7 @@ export default function RootLayout({
           toastOptions={{
             // Default options for all toasts
             // duration: 20000,
+            // icon: <TipSvg className="fill-white-01 group-hover:fill-white-01" />,
             style: {
               background: "#363636", // Example background
               color: "#fff", // Example text color
@@ -48,8 +51,13 @@ export default function RootLayout({
             },
           }}
         />
-
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -33,7 +33,7 @@ export class BankCoreProvider {
     this.apiKey = this.configService.get<string>('BANKCORE_API_KEY');
     this.userName = this.configService.get<string>('BANKCORE_USERNAME');
     this.password = this.configService.get<string>('BANKCORE_PASSWORD');
-     this.expiration = this.configService.get<string>(
+    this.expiration = this.configService.get<string>(
       'BANKCORE_SESSIONID_EXPIRATION',
     );
   }
@@ -80,7 +80,7 @@ export class BankCoreProvider {
       //   sessionId,
       //   Number(this.expiration),
       // );
-     
+
       return sessionId;
     } catch (error) {
       this.eventEmitter.emit(
@@ -105,7 +105,7 @@ export class BankCoreProvider {
     try {
       const response = await axios.post(
         url,
-        { ssn: nationalCode.toString().padStart(10, '0') },
+        { ssn: nationalCode.toString().length < 11 ? nationalCode.toString().padStart(10, '0') : nationalCode.toString() },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -159,6 +159,7 @@ export class BankCoreProvider {
         url,
         {
           cif: cif.toString(),
+          //length: 9
           depositNumbers: depositNumber.map((d) => d.toString()),
         },
         {

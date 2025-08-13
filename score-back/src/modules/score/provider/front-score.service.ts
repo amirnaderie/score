@@ -18,7 +18,6 @@ const moment = require('moment-jalaali');
 
 @Injectable()
 export class FrontScoreService {
-  private staleMonths: string;
   constructor(
     private configService: ConfigService,
     private eventEmitter: EventEmitter2,
@@ -31,7 +30,6 @@ export class FrontScoreService {
     private readonly sharedProvider: SharedProvider,
     private readonly dataSource: DataSource,
   ) {
-    this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
   }
 
   public async findByNationalCodeForFront(nationalCode: number) {
@@ -49,7 +47,7 @@ export class FrontScoreService {
             logTypes: logTypes.INFO,
             fileName: 'front-score.service',
             method: 'findByNationalCodeForFront',
-            message: 'ُThere is no record for given nationalCode',
+            message: `There is no record for the nationalCode: ${nationalCode}`,
             requestBody: JSON.stringify({ nationalCode }),
             stack: '',
           }),
@@ -211,7 +209,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'acceptUsedScore',
-          message: `personalCode:${user.userName} branchCode:${userData.branchCode} deleted a usedScore `,
+          message: `Accept use for referenceCode:${referenceCode} personalCode:${user.userName} branchCode:${userData.branchCode}  `,
           requestBody: JSON.stringify({ referenceCode, user }),
           stack: '',
         }),
@@ -259,7 +257,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'cancleUsedScoreFront',
-          message: `personalCode:${user.userName} branchCode:${userData.branchCode} deleted a usedScore `,
+          message: `cancel use for referenceCode:${referenceCode} personalCode:${user.userName} branchCode:${userData.branchCode} `,
           requestBody: JSON.stringify({ referenceCode, user }),
           stack: '',
         }),

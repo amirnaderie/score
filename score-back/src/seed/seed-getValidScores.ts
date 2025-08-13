@@ -5,7 +5,7 @@ export async function seedGetValidScoreProcedure(dataSource: DataSource) {
     IF OBJECT_ID('getValidScores', 'P') IS NOT NULL
       DROP PROCEDURE getValidScores;
     GO
-  ALTER   FUNCTION [dbo].[getScoresFunction]
+  create  FUNCTION [dbo].[getScoresFunction]
 (
     @accountNumber BIGINT,
     @nationalCode BIGINT,
@@ -25,7 +25,7 @@ RETURN
 		max(updated_at) as updated_at
     FROM dbo.getValidScoresFunction(@accountNumber, @nationalCode, @expirationMonth, @currentDate)
 );
-
+////////////////////////////////////////////////////////
 create FUNCTION [dbo].[getValidScoresFunction]
 (
     @accountNumber BIGINT,
@@ -77,8 +77,8 @@ RETURN
       )
 	 
 );
-
-ALTER PROCEDURE [dbo].[getScoresOfNationalCode]
+//////////////////////////////////////////////////////////
+create PROCEDURE [dbo].[getScoresOfNationalCode]
     @nationalCode BIGINT,
     @expirationMonth INT = 18,
     @currentDate INT = 0
@@ -101,7 +101,8 @@ BEGIN
     CROSS APPLY dbo.getScoresFunction(accounts.accountNumber, @nationalCode, @expirationMonth, @currentDate) f
     WHERE f.recordCount > 0; -- Only return accounts that have valid scores
 END;
-
+///////////////////////////////////////////////////////
+isnull(referenceCode,CONCAT(SUBSTRING(replace(replace(replace(created_at,'-',''),' ',''),':',''),3,12),ISNULL(branchCode,0))) as ref
   `);
   console.log('Seeded stored procedure: getValidScores');
 }

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import ConfirmModal from "@/app/components/ConfirmModal";
+import ConfirmModal from "@/app/__components/ConfirmModal";
 
 import toast from "react-hot-toast";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
@@ -252,10 +252,8 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center  justify-items-center h-full p-8  gap-14 sm:p-20">
-      <h1 className="text-2xl font-bold text-amber-700">
-        سامانه مدیریت امتیاز تسهیلات
-      </h1>
+    <div className="flex flex-col items-center  justify-items-center h-full p-8  gap-14 sm:p-10">
+     
       <div className="flex flex-col gap-y-2  max-w-md ">
         <label className="font-semibold">کد ملی :</label>
         <div className="flex gap-2">

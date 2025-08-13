@@ -105,7 +105,6 @@ export class ApiScoreService {
     ip: string,
     referenceCode: number | null,
   ) {
-
     try {
       if (
         score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
@@ -149,73 +148,99 @@ export class ApiScoreService {
         });
       }
 
+      if (fromNationalCode.toString().length < 11) {
+        const scoreFromOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+        const { depositStatus: depositStatusFrom } =
+          await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+            fromAccountNumber,
+          ]);
 
-      const scoreToOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-      const scoreFromOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      const { depositStatus: depositStatusFrom } =
-        await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-          fromAccountNumber,
-        ]);
-      const { depositStatus: depositStatusTo, depositType: depositTypeTo } =
-        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
-          toAccountNumber,
-        ]);
-      const validDepositTypes = this.validDepositTypes.split(",");
-      if (validDepositTypes.findIndex(item => item.toString() === depositTypeTo.toString()) < 0) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message: `the Account ${toAccountNumber} is not valid type to transfer score`,
-            requestBody: JSON.stringify({
-              fromAccountNumber,
-              toAccountNumber,
+        if (depositStatusFrom !== 'OPEN') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `fromAccountNumber:${fromAccountNumber}  is close`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
             }),
-            stack: '',
-          }),
-        );
+          );
 
-        throw new BadRequestException({
-          message: ErrorMessages.NOTACTIVE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
       }
-      if (depositStatusFrom !== 'OPEN' || depositStatusTo !== 'OPEN') {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message: `fromAccountNumber:${fromAccountNumber} or toAccountNumber:${toAccountNumber} is close`,
-            requestBody: JSON.stringify({
-              fromAccountNumber,
-              toAccountNumber,
+      if (toNationalCode.toString().length < 11) {
+        const scoreToOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+        const { depositStatus: depositStatusTo, depositType: depositTypeTo } =
+          await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+            toAccountNumber,
+          ]);
+
+        const validDepositTypes = this.validDepositTypes.split(",");
+        if (validDepositTypes.findIndex(item => item.toString() === depositTypeTo.toString()) < 0) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `the Account ${toAccountNumber} is not valid type to transfer score`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
             }),
-            stack: '',
-          }),
-        );
+          );
 
-        throw new BadRequestException({
-          message: ErrorMessages.NOTACTIVE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+
+        if (depositStatusTo !== 'OPEN') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `toAccountNumber:${toAccountNumber} is close`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
+            }),
+          );
+
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
       }
-
-
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({
           where: {
             referenceCode,
           },
         });
-        if (foundReferenceCode)
+        if (foundReferenceCode) {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
@@ -231,16 +256,17 @@ export class ApiScoreService {
             }),
           );
 
-        throw new ConflictException({
-          message: ErrorMessages.REPETITIVE_INFO_FAILED,
-          statusCode: HttpStatus.CONFLICT,
-          error: 'Conflict',
-        });
+          throw new ConflictException({
+            message: ErrorMessages.REPETITIVE_INFO_FAILED,
+            statusCode: HttpStatus.CONFLICT,
+            error: 'Conflict',
+          });
+        }
       }
 
       return this.sharedProvider.transferScore(fromNationalCode, toNationalCode, fromAccountNumber, toAccountNumber, score, 0, referenceCode);
 
-      return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
+      // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
       handelError(error, this.eventEmitter, 'score.service', 'transferScore', {
         fromNationalCode,
@@ -605,7 +631,7 @@ export class ApiScoreService {
           logTypes: logTypes.INFO,
           fileName: 'score.service',
           method: 'cancleUsedScore',
-          message: `Api deleted a usedScore `,
+          message: `Api deleted a usedScore with referenceCode: ${referenceCode}`,
           requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
           stack: '',
         }),

@@ -132,7 +132,7 @@ export class SharedProvider {
             logTypes: logTypes.INFO,
             fileName: 'shared.provider',
             method: 'consumeScore',
-            message: 'Insufficient score to use',
+            message: `Insufficient score to use for nationalCode:${nationalCode} and accountNumber:${accountNumber} requiredScore:${score} currentUsableScore:${scoreRec.usableScore}`,
             requestBody: JSON.stringify({
               scoreId: scoreRec?.id,
               personalCode,
@@ -200,11 +200,11 @@ export class SharedProvider {
           logTypes: logTypes.INFO,
           fileName: 'shared.provider',
           method: 'consumeScore',
-          message: `use successfully nationalCode:${scoreRec.nationalCode} accountNumber:${scoreRec.accountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode}`,
+          message: `use successfully nationalCode:${scoreRec.nationalCode} accountNumber:${scoreRec.accountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`)}`,
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,
-            referenceCode,
+            referenceCode:referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
             nationalCode: scoreRec.nationalCode,
             accountNumber: scoreRec.accountNumber,
             usableScore: scoreRec.usableScore,
@@ -364,7 +364,7 @@ export class SharedProvider {
           logTypes: logTypes.INFO,
           fileName: 'shared.provider',
           method: 'transferScore',
-          message: `transfer score successfully nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} accountNumber:${toAccountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode}`,
+          message: `transfer score successfully nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} accountNumber:${toAccountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`)}`,
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,

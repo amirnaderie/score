@@ -2,12 +2,12 @@
 
 import React, { FC, useState } from "react";
 import Link from "next/link";
-import SettingIcon from "@/app/__components/icons/setting/SettingIcon";
+import SettingIcon from "@/app/_components/icons/setting/SettingIcon";
 import {
   BaseCollapser,
   BaseCollapserContent,
   BaseCollapserHeader,
-} from "@/app/__components/collapser";
+} from "@/app/_components/collapser";
 import Image from "next/image";
 import { UseStore } from "@/store/useStore";
 import ArrowDownSvg from "@/assets/svgs/arrowDownSvg";
@@ -17,6 +17,7 @@ type IItem = {
   key: string;
   isOpen?: boolean;
   iconComponent?: React.ReactNode;
+  roles?: string[];
 };
 
 type INavbarItem = IItem & { children?: IItem[] };
@@ -30,88 +31,73 @@ interface Props {
     | "mobile-close";
 }
 
+import { useEffect } from "react";
+
+// Add role mapping for menu items
+const MENU_ROLES = {
+  score: ["score.view", "score.confirm", "score.branch"],
+  // Add more menu items and their required roles here
+};
+
 const Sidebar: FC<Props> = (props) => {
   const { navState } = props;
   const [selectedItem, setSelectedItem] = useState<IItem>();
-
   const user = UseStore((state) => state.userData);
-
   const [profileIsOpen, setProfileIsOpen] = useState(false);
 
-  const [items, setItems] = useState<INavbarItem[]>([
+  // Define all possible menu items with their roles
+  const allMenuItems: INavbarItem[] = [
     {
-      label: "تنظیمات",
-      key: "setting",
+      label: "عملیات",
+      key: "actions",
       isOpen: false,
-      iconComponent: (
-        <SettingIcon
-          parentClassname="bg-white-03 hover:bg-Secondary-01"
-          classname="fill-white-01 group-hover:fill-white-01"
-        />
-      ),
       children: [
         {
-          label: "گزینه تستی",
-          key: "string",
+          label: "مصرف امتیاز",
+          key: "score",
           isOpen: false,
-          iconComponent: (
-            <SettingIcon
-              parentClassname="bg-white-03 hover:bg-Secondary-01"
-              classname="fill-white-01 group-hover:fill-white-01"
-            />
-          ),
+          // Using MENU_ROLES instead of inline roles
+          ...MENU_ROLES.score,
+          //roles: ['score.view', 'score.confirm', 'score.branch']
         },
       ],
     },
     {
-      label: "اطلاعات پایه",
-      key: "setting",
+      label: "گزارش",
+      key: "reports",
       isOpen: false,
-      iconComponent: (
-        <SettingIcon
-          parentClassname="bg-white-03 hover:bg-Secondary-01"
-          classname="fill-white-01 group-hover:fill-white-01"
-        />
-      ),
       children: [
         {
-          label: "گزینه تستی",
-          key: "string",
+          label: "گزارش انتقالات",
+          key: "transfer",
           isOpen: false,
-          iconComponent: (
-            <SettingIcon
-              parentClassname="bg-white-03 hover:bg-Secondary-01"
-              classname="fill-white-01 group-hover:fill-white-01"
-            />
-          ),
+          ...MENU_ROLES.score,
         },
       ],
     },
-    {
-      label: "مشتریان",
-      key: "setting",
-      isOpen: false,
-      iconComponent: (
-        <SettingIcon
-          parentClassname="bg-white-03 hover:bg-Secondary-01"
-          classname="fill-white-01 group-hover:fill-white-01"
-        />
-      ),
-      children: [
-        {
-          label: "گزینه تستی",
-          key: "string",
-          isOpen: false,
-          iconComponent: (
-            <SettingIcon
-              parentClassname="bg-white-03 hover:bg-Secondary-01"
-              classname="fill-white-01 group-hover:fill-white-01"
-            />
+    // Add more menu items with roles as needed
+  ];
+
+  // Filter menu items based on user roles
+  const [items, setItems] = useState<INavbarItem[]>([]);
+
+  useEffect(() => {
+    if (user?.roles) {
+      const filteredItems = allMenuItems
+        .map((item) => ({
+          ...item,
+          children: item.children?.filter(
+            (child) =>
+              !child.roles ||
+              child.roles.some((role) => user.roles?.includes(role))
           ),
-        },
-      ],
-    },
-  ]);
+        }))
+        .filter((item) => !item.children || item.children.length > 0);
+      setItems(filteredItems);
+    } else {
+      setItems(allMenuItems);
+    }
+  }, [user]);
 
   const clickOnHeader = (i: number): void => {
     const localItems = items.map((item: INavbarItem, index: number) =>
@@ -180,55 +166,25 @@ const Sidebar: FC<Props> = (props) => {
               >
                 <div className="flex flex-col items-start gap-2 w-full">
                   <div
-                    className={`
-                                       
-                      ${
-                        navState === "desktop" || navState === "tablet-small"
-                          ? " block md:mr-4.5 md:mt-4 mt-0"
-                          : ""
-                      }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "md:mr-4.5 md:mt-4 mt-0 "
-                                  : ""
-                              }
+                    className={`${
+                      navState === "desktop" || navState === "tablet-small"
+                        ? " block md:mr-4.5 md:mt-4 mt-0"
+                        : ""
+                    }                             ${
+                      navState === "mobile-large" || navState === "mobile-close"
+                        ? "md:mr-4.5 md:mt-4 mt-0 "
+                        : ""
+                    }
                     `}
                   >
-                    <Image
+                    {/* <Image
                       width={32}
                       height={32}
                       src={"/images/avatar-image.png"}
                       className="rounded-lg"
                       alt="avatar-image"
                       quality={100}
-                    />
-                  </div>
-                  <div
-                    className={`text-white-01 ${
-                      navState === "tablet-small" && "hidden lg:block"
-                    }
-                    
-                      ${
-                        navState === "desktop" || navState === "tablet-small"
-                          ? " hidden lg:block"
-                          : ""
-                      }
-                              ${
-                                navState === "desktop" ||
-                                navState === "tablet-small"
-                                  ? "block md:hidden lg:block"
-                                  : ""
-                              }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "block md:hidden lg:block"
-                                  : ""
-                              }
-                    `}
-                  >
-                    {user?.personelCode || "رامین جعفری"}
+                    /> */}
                   </div>
                   <div
                     className={`text-white-02 text-xs
@@ -251,23 +207,22 @@ const Sidebar: FC<Props> = (props) => {
                               }
                     `}
                   >
-                    کاربر بانک سپه
+                    نام کـاربـر
                   </div>
-                </div>
-                <div
-                  className={`ml-10 origin-center block ${
-                    profileIsOpen ? "" : ""
-                  }
-                        ${navState === "tablet-small" && "hidden lg:block"}
-                     ${
-                       navState === "desktop" || navState === "tablet-small"
-                         ? " hidden lg:block"
-                         : ""
-                     }
+                  <div
+                    className={`text-white-01 mr-4 ${
+                      navState === "tablet-small" && "hidden lg:block"
+                    }
+                    
+                      ${
+                        navState === "desktop" || navState === "tablet-small"
+                          ? " hidden lg:block"
+                          : ""
+                      }
                               ${
                                 navState === "desktop" ||
                                 navState === "tablet-small"
-                                  ? " block md:hidden lg:block"
+                                  ? "block md:hidden lg:block"
                                   : ""
                               }
                               ${
@@ -276,34 +231,16 @@ const Sidebar: FC<Props> = (props) => {
                                   ? "block md:hidden lg:block"
                                   : ""
                               }
-                        `}
-                  style={
-                    profileIsOpen
-                      ? {
-                          transform: `rotate(90deg)`,
-                          transition: `transform 300ms`,
-                          transformOrigin: "center center",
-                        }
-                      : {
-                          transform: `rotate(-90deg)`,
-                          transition: `transform 300ms`,
-                          transformOrigin: "center center",
-                        }
-                  }
-                >
-                  <ArrowDownSvg
-                    width={16}
-                    height={16}
-                    className={` ${
-                      profileIsOpen ? "fill-white-01" : "fill-white-03"
-                    }`}
-                  />
+                    `}
+                  >
+                    {user?.personelCode || ""}
+                  </div>
                 </div>
               </div>
             </BaseCollapserHeader>
             <BaseCollapserContent id={9999}>
               <div className=" text-sm rounded-lg ">
-                <Link
+                {/* <Link
                   key={`BaseCollapserContent-${66}`}
                   className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block mb-2 py-3 `}
                   href={"/dashboard/profile"}
@@ -322,18 +259,16 @@ const Sidebar: FC<Props> = (props) => {
                       پروفایل
                     </div>
                   </div>
-                </Link>
+                </Link> */}
               </div>
             </BaseCollapserContent>
           </BaseCollapser>
-
           <div
             className={`w-10/12 mx-auto h-px bg-gradient-to-r from-transparent via-white to-transparent mb-3 mt-4 lg:ml-8`}
           />
-
           {items.map((item: INavbarItem, index: number) => {
             const isActive = selectedItem?.key === item.key;
-            if (item.children) {
+            if (item.children && item.children.length > 0) {
               return (
                 <BaseCollapser key={index}>
                   <BaseCollapserHeader
@@ -381,7 +316,7 @@ const Sidebar: FC<Props> = (props) => {
                             ? "md:hidden lg:block"
                             : ""
                         }
-                      ${item.iconComponent ? "" : "mr-10"}
+                      
                           `}
                         >
                           {item.label}
@@ -439,7 +374,7 @@ const Sidebar: FC<Props> = (props) => {
                                 className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block mb-2 py-3  ${
                                   x && `text-sm `
                                 }`}
-                                href={navbarItem.key}
+                                href={`/dashboard/${navbarItem.key}`}
                                 onClick={() => handelSelectedItem(navbarItem)}
                                 id="navbar-item"
                               >
@@ -471,7 +406,9 @@ const Sidebar: FC<Props> = (props) => {
                                     <div className="">{item.iconComponent}</div>
                                   )}
                                   <div
-                                    className={`text-white-01 select-none ${
+                                    className={` select-none hover:text-Secondary-01  ${
+                                      x ? "text-Secondary-02" : "text-white-01"
+                                    }  ${
                                       (navState === "desktop" ||
                                         navState === "tablet-small" ||
                                         navState === "mobile-close") &&
@@ -482,9 +419,9 @@ const Sidebar: FC<Props> = (props) => {
                                       ? "md:hidden lg:block"
                                       : ""
                                   }
-                                ${item.iconComponent ? "" : "mr-10"}`}
+                                 mr-3`}
                                   >
-                                    {item.label}
+                                    {item.children![idx].label}
                                   </div>
                                 </div>
                               </Link>

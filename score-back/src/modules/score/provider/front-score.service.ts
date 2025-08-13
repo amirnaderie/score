@@ -14,21 +14,23 @@ import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { SharedProvider } from './shared.provider';
 import { LogEvent } from 'src/modules/event/providers/log.event';
 import { ConfigService } from '@nestjs/config';
+import { PaginatedTransferResponseDto, TransferResponseDto } from '../dto/paginated-transfer.dto';
+import { TransferScore } from '../entities/transfer-score.entity';
 const moment = require('moment-jalaali');
 
 @Injectable()
 export class FrontScoreService {
   constructor(
-    private configService: ConfigService,
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
     @InjectRepository(UsedScore)
-    private readonly UsedScoreRepository: Repository<UsedScore>,
+    private readonly usedScoreRepository: Repository<UsedScore>,
+    @InjectRepository(TransferScore)
+    private readonly transferScoreRepository: Repository<TransferScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-    private readonly dataSource: DataSource,
   ) {
   }
 
@@ -65,7 +67,7 @@ export class FrontScoreService {
         if (scoreRecs && scoreRecs.length > 0) {
           const scoreIds = scoreRecs.map(rec => rec.id);
 
-          const usedRecs = await this.UsedScoreRepository
+          const usedRecs = await this.usedScoreRepository
             .createQueryBuilder('usedScore')
             .select([
               'usedScore.referenceCode as referenceCode',
@@ -178,7 +180,7 @@ export class FrontScoreService {
   }
 
   async acceptUsedScoreFront(referenceCode: number, user: User) {
-    const usedScoreRec = await this.UsedScoreRepository.find({
+    const usedScoreRec = await this.usedScoreRepository.find({
       where: {
         referenceCode,
       },
@@ -202,7 +204,7 @@ export class FrontScoreService {
       usedScoreRec[index].updatedAt = new Date();
     }
     try {
-      await this.UsedScoreRepository.save(usedScoreRec);
+      await this.usedScoreRepository.save(usedScoreRec);
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
@@ -230,7 +232,7 @@ export class FrontScoreService {
   }
 
   async cancleUsedScoreFront(referenceCode: number, user: User) {
-    const usedScoreRec = await this.UsedScoreRepository.find({
+    const usedScoreRec = await this.usedScoreRepository.find({
       where: {
         referenceCode,
       },
@@ -250,7 +252,7 @@ export class FrontScoreService {
         error: 'Not Found',
       });
     try {
-      await this.UsedScoreRepository.remove(usedScoreRec);
+      await this.usedScoreRepository.remove(usedScoreRec);
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
@@ -278,6 +280,103 @@ export class FrontScoreService {
     return {
       message: ErrorMessages.SUCCESSFULL,
       statusCode: 200,
+    };
+  }
+
+
+    public async getAllTransfersPaginated(
+    nationalCode: number,
+    accountNumber: number,
+    page: number = 1,
+    limit: number = 10,
+    sortBy: string = 'date',
+    sortOrder: string = 'DESC'
+  ): Promise<PaginatedTransferResponseDto> {
+    const skip = (page - 1) * limit;
+    
+    // Create query builder for transfers FROM this account
+    const fromQuery = this.transferScoreRepository
+      .createQueryBuilder('transfer')
+      .leftJoinAndSelect('transfer.fromScore', 'fromScore')
+      .leftJoinAndSelect('transfer.toScore', 'toScore')
+      .where('fromScore.nationalCode = :nationalCode', { nationalCode })
+      .andWhere('fromScore.accountNumber = :accountNumber', { accountNumber });
+
+    // Create query builder for transfers TO this account
+    const toQuery = this.transferScoreRepository
+      .createQueryBuilder('transfer')
+      .leftJoinAndSelect('transfer.fromScore', 'fromScore')
+      .leftJoinAndSelect('transfer.toScore', 'toScore')
+      .where('toScore.nationalCode = :nationalCode', { nationalCode })
+      .andWhere('toScore.accountNumber = :accountNumber', { accountNumber });
+
+    // Get total count
+    const [fromCount, toCount] = await Promise.all([
+      fromQuery.getCount(),
+      toQuery.getCount()
+    ]);
+    const total = fromCount + toCount;
+
+    // Get paginated results
+    const [fromTransfers, toTransfers] = await Promise.all([
+      fromQuery
+        .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
+        .skip(skip)
+        .take(limit)
+        .getMany(),
+      toQuery
+        .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
+        .skip(Math.max(0, skip - fromCount))
+        .take(limit)
+        .getMany()
+    ]);
+
+    // Combine and format results
+    const formattedTransfers: TransferResponseDto[] = [
+      ...fromTransfers.map(transfer => ({
+        referenceCode: transfer.referenceCode,
+        fromNationalCode: transfer.fromScore.nationalCode,
+        fromAccountNumber: transfer.fromScore.accountNumber,
+        toNationalCode: transfer.toScore.nationalCode,
+        toAccountNumber: transfer.toScore.accountNumber,
+        score: transfer.score,
+        transferDate: transfer.createdAt.toISOString(),
+        transferDateShamsi: moment(transfer.createdAt).format('jYYYY/jMM/jDD HH:mm:ss'),
+        direction: 'from' as const
+      })),
+      ...toTransfers.map(transfer => ({
+        referenceCode: transfer.referenceCode,
+        fromNationalCode: transfer.fromScore.nationalCode,
+        fromAccountNumber: transfer.fromScore.accountNumber,
+        toNationalCode: transfer.toScore.nationalCode,
+        toAccountNumber: transfer.toScore.accountNumber,
+        score: transfer.score,
+        transferDate: transfer.createdAt.toISOString(),
+        transferDateShamsi: moment(transfer.createdAt).format('jYYYY/jMM/jDD HH:mm:ss'),
+        direction: 'to' as const
+      }))
+    ];
+
+    // Sort combined results
+    formattedTransfers.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'date') {
+        comparison = new Date(a.transferDate).getTime() - new Date(b.transferDate).getTime();
+      } else if (sortBy === 'score') {
+        comparison = a.score - b.score;
+      }
+      return sortOrder === 'ASC' ? comparison : -comparison;
+    });
+
+    // Apply pagination to combined results
+    const paginatedTransfers = formattedTransfers.slice(0, limit);
+
+    return {
+      data: paginatedTransfers,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     };
   }
 }

@@ -17,26 +17,35 @@ import handelError from 'src/utility/handel-error';
 
 @Injectable()
 export class AuthService {
+  private clientId: string;
+  private clientSecret: string;
+  private authUrl: string;
+  private redirect_uri: string;
+
   constructor(
     private readonly configService: ConfigService,
     private eventEmitter: EventEmitter2,
-  ) {}
+  ) {
+    this.clientId = this.configService.get('CLIENT_ID');
+    this.clientSecret = this.configService.get('CLIENT_SECRET');
+    this.authUrl = this.configService.get('AUTH_URL');
+    this.redirect_uri = this.configService.get('REDIRECT_URI')
+  }
 
   async authenticate(req: Request, response: Response, codeParameter: string) {
     //try {
     //const codeParameter = (req as any).body.codeParameter;
-    const authUrl = this.configService.get('AUTH_URL');
     process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
     const parameterValue = querystring.stringify({
       grant_type: 'authorization_code',
       code: codeParameter,
-      client_id: this.configService.get('CLIENT_ID'),
-      client_secret: this.configService.get('CLIENT_SECRET'),
-      redirect_uri: this.configService.get('REDIRECT_URI'),
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+      redirect_uri: this.redirect_uri,
     });
     let tokenFromSSO;
 
-    tokenFromSSO = await axios.post(`${authUrl}token`, parameterValue, {
+    tokenFromSSO = await axios.post(`${this.authUrl}token`, parameterValue, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -114,10 +123,8 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<any> {
     try {
-      const clientId = this.configService.get('CLIENT_ID');
-      const clientSecret = this.configService.get('CLIENT_SECRET');
-      const authUrl = this.configService.get('AUTH_URL');
-      const basic = `${clientId}:${clientSecret}`;
+
+      const basic = `${this.clientId}:${this.clientSecret}`;
       const encodedToken = Buffer.from(basic).toString('base64');
       const roles = this.configService.get<string>('ROLES');
       process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
@@ -127,7 +134,7 @@ export class AuthService {
         return null;
       }
       const response = await axios.post(
-        authUrl + 'api/profile',
+        this.authUrl + 'api/profile',
         querystring.stringify({ token }),
         {
           headers: {
@@ -255,7 +262,7 @@ export class AuthService {
       const userDetailData = await retVal.json();
       return {
         branchCode: userDetailData.currentUnit.code,
-        branchName: userDetailData.currentUnit.name,
+        branchName: "",//userDetailData.currentUnit.name,
       };
     } catch (error) {
       handelError(
@@ -264,6 +271,35 @@ export class AuthService {
         'score.service',
         'getPersonalData',
         { personelCode },
+      );
+      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+    }
+  }
+
+  async signOut(req: Request) {
+    try {
+      const basic = `${this.clientId}:${this.clientSecret}`;
+      const encodedToken = Buffer.from(basic).toString("base64");
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+      const token = (req as any).cookies['accessToken'];
+      const isValidAccessToken = await axios.post(
+        `${this.authUrl}revoke`,
+        querystring.stringify({ token }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: "Basic " + encodedToken,
+          },
+        },
+      );
+      return true;
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'score.service',
+        'signOut',
+        {}
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
     }

@@ -1,4 +1,4 @@
-import Content from "./__components/layout/Content";
+import Content from "./_components/layout/Content";
 
 export default async function DashboardLayout({
   children,

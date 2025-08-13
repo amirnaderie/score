@@ -2,10 +2,12 @@
 
 import { FC } from "react";
 import Image from "next/image";
-import NotificationIcon from "@/app/__components/icons/setting/notificationIcon";
-import LogoutIcon from "@/app/__components/icons/setting/logoutIcon";
-import NavbarIcon from "@/app/__components/icons/setting/navbarIcon";
-import ThemeToggle from "@/app/__components/theme-toggle/ThemeToggle";
+import NotificationIcon from "@/app/_components/icons/setting/notificationIcon";
+import LogoutIcon from "@/app/_components/icons/setting/logoutIcon";
+import NavbarIcon from "@/app/_components/icons/setting/navbarIcon";
+import ThemeToggle from "@/app/_components/theme-toggle/ThemeToggle";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface Props {
   navState:
@@ -18,6 +20,27 @@ interface Props {
 
 const Header: FC<Props> = (props) => {
   const { navState } = props;
+    const router = useRouter();
+
+  const signOut = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/sign-out`,
+        {
+          method: "POST",
+          credentials: "include", // Important!
+        }
+      );
+      if (response.ok) {
+        toast.success("خروج موفق");
+        router.push(`${process.env.NEXT_PUBLIC_SSO_URI}api/auth/logout`);
+      } else {
+        toast.error("خطا در خروج");
+      }
+    } catch (error) {
+      toast.error("خطا در خروج");
+    }
+  };
   return (
     <>
       <div className=" flex justify-between items-center p-6 bg-white dark:bg-primary-00 rounded-2xl">
@@ -50,13 +73,13 @@ const Header: FC<Props> = (props) => {
         </div>
         <div className="flex gap-2 items-center">
           {/* <div className="ml-6">سرچ</div> */}
-          <div>
+          {/* <div>
             <ThemeToggle />
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <NotificationIcon />
-          </div>
-          <div>
+          </div> */}
+          <div onClick={signOut}>
             <LogoutIcon />
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   HttpCode,
   Put,
   Delete,
+  Query,
 } from '@nestjs/common';
 
 import { Roles } from 'src/decorators/roles.decorator';
@@ -20,6 +21,7 @@ import { User } from 'src/interfaces/user.interface';
 import { GetUser } from 'src/decorators/getUser.decorator';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { FrontScoreService } from '../provider/front-score.service';
+import { PaginatedTransferDto } from '../dto/paginated-transfer.dto';
 
 @Controller('front/score')
 export class FrontScoreController {
@@ -86,5 +88,26 @@ export class FrontScoreController {
     referenceCode: number,
   ) {
     return this.frontScoreService.cancleUsedScoreFront(referenceCode, user);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm', 'score.branch','score.view')
+  @Get('transfers/all')
+  async getAllTransfersPaginated(@Query() query: PaginatedTransferDto) {
+    const nationalCode = Number(query.nationalCode);
+    const accountNumber = Number(query.accountNumber);
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const sortBy = query.sortBy || 'date';
+    const sortOrder = query.sortOrder || 'DESC';
+
+    return this.frontScoreService.getAllTransfersPaginated(
+      nationalCode,
+      accountNumber,
+      page,
+      limit,
+      sortBy,
+      sortOrder
+    );
   }
 }

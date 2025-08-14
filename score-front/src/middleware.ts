@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Define public paths
-const publicPaths = ["/login", "/logout", "/callback", "/","/dashboard"];
+const publicPaths = ["/login", "/logout", "/callback", "/"];
 
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {

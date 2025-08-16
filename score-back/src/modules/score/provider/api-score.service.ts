@@ -148,37 +148,37 @@ export class ApiScoreService {
         });
       }
 
-      if (fromNationalCode.toString().length < 11) {
-        const scoreFromOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-        const { depositStatus: depositStatusFrom } =
-          await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-            fromAccountNumber,
-          ]);
+      //if (fromNationalCode.toString().length < 11) {
+      const scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      const { depositStatus: depositStatusFrom } =
+        await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+          fromAccountNumber,
+        ]);
 
-        if (depositStatusFrom !== 'OPEN') {
-          this.eventEmitter.emit(
-            'logEvent',
-            new LogEvent({
-              logTypes: logTypes.INFO,
-              fileName: 'score.service',
-              method: 'transferScore',
-              message: `fromAccountNumber:${fromAccountNumber}  is close`,
-              requestBody: JSON.stringify({
-                fromAccountNumber,
-                toAccountNumber,
-              }),
-              stack: '',
+      if (depositStatusFrom !== 'OPEN') {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'transferScore',
+            message: `fromAccountNumber:${fromAccountNumber}  is close`,
+            requestBody: JSON.stringify({
+              fromAccountNumber,
+              toAccountNumber,
             }),
-          );
+            stack: '',
+          }),
+        );
 
-          throw new BadRequestException({
-            message: ErrorMessages.NOTACTIVE,
-            statusCode: HttpStatus.BAD_REQUEST,
-            error: 'Bad Request',
-          });
-        }
+        throw new BadRequestException({
+          message: ErrorMessages.NOTACTIVE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
       }
+      // }
       if (toNationalCode.toString().length < 11) {
         const scoreToOwner =
           await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);

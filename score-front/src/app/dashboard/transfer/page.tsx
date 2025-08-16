@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import SearchForm from "./_components/serachForm";
 import TransferTable from "./_components/transferTable";
 import Pagination from "./_components/pagination";
-import { transferApi, TransferData } from "@/app/api/score/route";
+import { transferApi, TransferData } from "@/app/dashboard/transfer/api/apis";
 import toast from "react-hot-toast";
 
 export default function TransferDashboard() {
@@ -15,7 +15,7 @@ export default function TransferDashboard() {
     nationalCode: "",
     accountNumber: "",
     page: 1,
-    limit: 10,
+    limit: 8,
     sortBy: "date" as const,
     sortOrder: "DESC" as const,
   });
@@ -68,12 +68,11 @@ export default function TransferDashboard() {
   };
 
   const handleSort = (sortBy: "date" | "score", sortOrder: "ASC" | "DESC") => {
-    setSearchParams((prev) => ({ ...prev, sortBy, sortOrder }));
+    setSearchParams((prev: any) => ({ ...prev, sortBy, sortOrder }));
   };
 
   return (
-    <div className="container mx-auto p-4">
-
+    <div className="container mx-auto p-2">
       <SearchForm onSearch={handleSearch} loading={loading} />
 
       {error && (

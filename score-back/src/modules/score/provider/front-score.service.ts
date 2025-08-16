@@ -34,7 +34,7 @@ export class FrontScoreService {
     private readonly transferScoreRepository: Repository<TransferScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -118,7 +118,8 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+
+      } catch { }
       return {
         data: {
           scoresRec,

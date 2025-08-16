@@ -173,7 +173,7 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
           });
           UseScore.push(localUseScore)
         }
@@ -186,7 +186,7 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
           });
           remaindscore = 0
           UseScore.push(localUseScore)
@@ -204,7 +204,7 @@ export class SharedProvider {
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,
-            referenceCode:referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
             nationalCode: scoreRec.nationalCode,
             accountNumber: scoreRec.accountNumber,
             usableScore: scoreRec.usableScore,
@@ -331,7 +331,7 @@ export class SharedProvider {
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
           });
           await this.transferScoreRepository.save(localTransferScore)
         }
@@ -352,7 +352,7 @@ export class SharedProvider {
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
           });
           await this.transferScoreRepository.save(localTransferScore)
           remaindscore = 0

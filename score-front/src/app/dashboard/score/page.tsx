@@ -273,7 +273,7 @@ export default function Home() {
           />
           <button
             // className="bg-blue-300  w-24  py-2 rounded  flex justify-center items-center cursor-pointer"
-            className="w-24 bg-blue-500 text-white disabled:opacity-50 py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer"
+            className="w-24 bg-blue-500 text-white disabled:opacity-50 flex justify-center items-center py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer"
             onClick={handleFetch}
             disabled={loading || !nationalCode}
           >
@@ -291,8 +291,8 @@ export default function Home() {
         <div className="w-full max-w-4xl  flex flex-col gap-y-10 items-center">
           <div className=" w-full rounded-md overflow-hidden">
             {ownerFullName.length > 0 && (
-              <div className="h-14 w-full flex justify-center items-center bg-cyan-50 font-bold">
-                نام و نام خانوادگی: {ownerFullName}
+              <div className="h-14 w-full flex justify-center items-center bg-cyan-50 font-semibold">
+                نام مشتری: {ownerFullName}
               </div>
             )}
             <div className="w-full border-collapse ">

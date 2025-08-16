@@ -16,11 +16,11 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
 
   const validateNationalCode = (value: string) => {
     if (!value) {
-      setNationalCodeError("کد ملی الزامی است");
+      setNationalCodeError("کد /شناسه ملی الزامی است");
     } else if (!validateIranianNationalCode(Number(value))) {
-      setNationalCodeError("کد ملی معتبر نیست");
-    } else if (!/^\d{10}$/.test(value)) {
-      setNationalCodeError("کد ملی فقط باید شامل اعداد باشد");
+      setNationalCodeError("کد/شناسه ملی معتبر نیست");
+    // } else if (!/^\d{10}$/.test(value)) {
+    //   setNationalCodeError("کد ملی فقط باید شامل اعداد باشد");
     } else {
       setNationalCodeError("");
     }
@@ -31,8 +31,8 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
       setAccountNumberError("شماره حساب الزامی است");
     } else if (value.length < 4 || value.length > 14) {
       setAccountNumberError("شماره حساب معتبر نیست");
-    } else if (!/^\d+$/.test(value)) {
-      setAccountNumberError("شماره حساب فقط باید شامل اعداد باشد");
+    // } else if (!/^\d+$/.test(value)) {
+    //   setAccountNumberError("شماره حساب فقط باید شامل اعداد باشد");
     } else {
       setAccountNumberError("");
     }
@@ -58,12 +58,13 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-lg shadow-md mb-6"
+      className="bg-white p-2 rounded-lg shadow-md h-30 mb-2"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full items-center">
+        <div className="h-full">
+
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            کد ملی
+            کد/شناسه ملی
           </label>
           <input
             type="number"
@@ -73,12 +74,12 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
               setNationalCode(e.target.value);
               validateNationalCode(e.target.value);
             }}
-            className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm ${
+            className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right ${
               nationalCodeError
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-blue-500"
             }`}
-            placeholder="کد ملی را وارد نمایید"
+            placeholder="کد/شناسه ملی را وارد نمایید"
             maxLength={11}
             required
           />
@@ -86,7 +87,8 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
             <p className="text-red-500 text-xs mt-1">{nationalCodeError}</p>
           )}
         </div>
-        <div>
+        <div className="h-full">
+
           <label className="block text-sm font-medium text-gray-700 mb-2">
             شماره حساب
           </label>
@@ -98,7 +100,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
               setAccountNumber(e.target.value);
               validateAccountNumber(e.target.value);
             }}
-            className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm ${
+            className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right ${
               accountNumberError
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-blue-500"
@@ -111,7 +113,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
             <p className="text-red-500 text-xs mt-1">{accountNumberError}</p>
           )}
         </div>
-        <div className="flex items-end">
+        <div className="flex items-center h-full pb-2">
           <button
             type="submit"
             disabled={

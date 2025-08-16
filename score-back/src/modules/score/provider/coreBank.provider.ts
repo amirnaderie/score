@@ -106,10 +106,9 @@ export class BankCoreProvider {
       const response = await axios.post(
         url,
         {
-          ssn:
-            nationalCode.toString().length < 11
-              ? nationalCode.toString().padStart(10, '0')
-              : nationalCode.toString(),
+          ssn: nationalCode.toString().length < 11
+            ? nationalCode.toString().padStart(10, '0') : null,
+          corporationId: nationalCode.toString().length === 11 ? nationalCode.toString() : null
         },
         {
           headers: {
@@ -176,7 +175,7 @@ export class BankCoreProvider {
         {
           cif: cif.toString(),
           //length: 9
-          depositNumbers: depositNumber.map((d) => d.toString()),
+          depositNumbers: depositNumber.map((d) => d.toString())
         },
         {
           headers: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { TransferData } from "@/app/api/score/route";
+import { TransferData } from "@/app/dashboard/transfer/api/apis";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 import React from "react";
 

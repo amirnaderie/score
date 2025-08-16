@@ -2,7 +2,6 @@
 
 import React, { FC, useState } from "react";
 import Link from "next/link";
-import SettingIcon from "@/app/_components/icons/setting/SettingIcon";
 import {
   BaseCollapser,
   BaseCollapserContent,
@@ -207,7 +206,7 @@ const Sidebar: FC<Props> = (props) => {
                               }
                     `}
                   >
-                    نام کـاربـر
+                    نام کـاربـری
                   </div>
                   <div
                     className={`text-white-01 mr-4 ${

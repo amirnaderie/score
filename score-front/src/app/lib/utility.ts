@@ -19,9 +19,10 @@ export const generateToken = (length: number): string => {
 };
 
 export const validateIranianNationalCode = (nationalCode: number) => {
+  
   if (nationalCode.toString().length === 11)
     return true
-  
+
   // Check if input is provided
   if (!nationalCode) {
     return false;

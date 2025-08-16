@@ -13,7 +13,7 @@ export const ErrorMessages = {
   SIGNIN_FAILD: 'نام کاربری یا رمز عبور اشتباه است',
   INSUFFICIENT_SCORE: 'امتیاز کافی نیست',
   SUCCESSFULL: 'عملیات با موفقیت انجام پذیرفت',
-  NOTACTIVE: 'حساب فعال نیست',
+  NOTACTIVE: 'حساب فعال یا معتبر نیست',
   OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است',
   FORBIDDEN: 'عدم مجوز دسترسی',
 };

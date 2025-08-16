@@ -30,11 +30,16 @@ export class TransferScore extends BaseEntity {
   score: number;
 
   @Column({
-    type: 'varchar',
+    type: 'int',
     nullable: true,
-    length: 30,
   })
-  userId: string;
+  personalCode: number;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  branchCode: number;
 
   @Index('IX_TransferScores_referenceCode')
   @Column({

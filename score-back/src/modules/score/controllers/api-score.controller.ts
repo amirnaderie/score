@@ -26,7 +26,7 @@ export class APIScoreController {
   constructor(
     private readonly apiScoreService: ApiScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) {}
+  ) { }
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -43,12 +43,12 @@ export class APIScoreController {
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersTo')
   getTransferScoreTo(@Query() getTransferScoreDto: GetTransferScoreDto) {
-    const fromNationalCode = Number(getTransferScoreDto.nationalCode);
-    const fromAccountNumber = Number(getTransferScoreDto.accountNumber);
+    const toNationalCode = Number(getTransferScoreDto.nationalCode);
+    const toAccountNumber = Number(getTransferScoreDto.accountNumber);
 
     return this.apiScoreService.getTransferScoreTo(
-      fromNationalCode,
-      fromAccountNumber,
+      toNationalCode,
+      toAccountNumber,
     );
   }
 

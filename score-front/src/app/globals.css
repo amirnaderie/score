@@ -9,26 +9,64 @@
   font-display: swap;
 }
 
-@font-face {
+/* @font-face {
   font-family: "Vazirmatn";
   src: url("../../public/font/Vazirmatn-Bold.woff2") format("woff2"),
     url("../../public/font/Vazirmatn-Bold.woff2") format("woff");
   font-weight: bold;
   font-style: normal;
   font-display: swap;
-}
+} */
 
-:root {
+/* :root {
   --background: #ffffff;
   --foreground: #171717;
-}
+} */
 
 
-@theme inline {
+/* @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+} */
+@theme {
+  --text-xs: 0.75rem;
+  --font-sans: "Vazirmatn", sans-serif;
+  --color-primary-0: #061321;
+  --color-primary-00: #0a1f36;
+  --color-primary-01: #11345a;
+  --color-primary-02: #4a79ac;
+  --color-primary-03: #789BC1;
+
+  --color-Secondary-01: #e8651d;
+  --color-Secondary-02: #f7c7ad;
+  --color-Secondary-03: #fbe7dc;
+
+  --color-white-01: #fff;
+  --color-white-02: #FFFFFFB3;
+  --color-white-03: #FFFFFF80;
+  --color-white-04: #FFFFFF33;
+  --color-white-05: #FFFFFF1F;
+
+  --color-back: #EEEFF0; 
+
+  --color-black-01: #121212;
+  --color-black-02: #727272;
+  --color-black-03: #919191;
+  --color-black-04: #A9A9A9;
+  --color-black-05 : #DADADA;
+  --color-black-06: #F5F5F5;
+
+
+
+  --color-accent-01: #E8981D;
+  --color-accent-02: #FBEFDC;
+
+
+  --color-error: #B00020;
+
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,17 +76,41 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Vazirmatn, sans-serif;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+[data-theme="dark"] {
+  --background: #0a1f36;
+  --foreground: #ededed;
+}
+
+/* Remove the media query and use class-based theming instead */
+.dark {
+  --background: #0a1f36;
+  --foreground: #ededed;
 }
 
 .persian-numbers {
   font-family: "Vazirmatn", sans-serif;
-  /* font-family: "Yekan", sans-serif; */
-  font-feature-settings: "ss01"; /* Enable Persian numerals */
+  font-feature-settings: "ss01";
 }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  direction: rtl;
+  transition: background-color 0.3s ease, color 0.3s ease;
+   font-family: Vazirmatn, sans-serif;
+}
+
+/* body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Vazirmatn, sans-serif;
+} */
+
 
 * {
   scrollbar-width: thin !important;
@@ -138,3 +200,4 @@ input[type="number"] {
   background-color: #5a6268; /* Darker hover state */
   border-color: #5a6268; /* Darker border on hover */
 }
+

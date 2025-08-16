@@ -5,7 +5,7 @@ import {
   HttpStatus,
   ConflictException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -24,40 +24,42 @@ const moment = require('moment-jalaali');
 
 @Injectable()
 export class ApiScoreService {
+  private staleMonths: string;
+  private validDepositTypes: string;
   constructor(
     private eventEmitter: EventEmitter2,
     private readonly authService: AuthService,
     @InjectRepository(Score)
     private readonly scoreRepository: Repository<Score>,
     @InjectRepository(TransferScore)
-    private readonly TransferScoreRepository: Repository<TransferScore>,
+    private readonly transferScoreRepository: Repository<TransferScore>,
     @InjectRepository(UsedScore)
     private readonly UsedScoreRepository: Repository<UsedScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) {
+    this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+    this.validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
+  }
 
   public async findByNationalCode(nationalCode: number) {
-    let scoresOfNationalCode: Partial<Score>[] | null;
-    let scoresRec: any[] = [];
+    let scoresOfNationalCode: any[] | null;
+    const scoresRec: any[] = [];
 
     try {
-      scoresOfNationalCode = await this.scoreRepository.find({
-        where: {
-          nationalCode: nationalCode,
-        },
-      });
+      scoresOfNationalCode =
+        await this.sharedProvider.getScoresRowsBynationalCode(nationalCode);
 
       if (!scoresOfNationalCode || scoresOfNationalCode.length === 0) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'findOneByNationalCode',
-            message: 'ُThere is no record for given nationalCode',
-            requestBody: JSON.stringify({ nationalCode: nationalCode }),
+            fileName: 'api-score.service',
+            method: 'findByNationalCode',
+            message: `There is no record for this nationalCode:${nationalCode}`,
+            requestBody: JSON.stringify({ nationalCode }),
             stack: '',
           }),
         );
@@ -67,19 +69,14 @@ export class ApiScoreService {
           statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
         });
-        // throw new NotFoundException(ErrorMessages.NOT_FOUND);
       }
       for (const score of scoresOfNationalCode) {
-        const scoreRec = await this.scoreRepository.query(
-          'exec getScores @nationalCode=@0,@accountNumber=@1',
-          [score.nationalCode, score.accountNumber],
-        );
         scoresRec.push({
           accountNumber: score.accountNumber,
-          usableScore: scoreRec[0].usableScore,
-          transferableScore: scoreRec[0].transferableScore,
+          usableScore: score.usableScore,
+          transferableScore: score.transferableScore,
           depositType: '1206',
-          updatedAt: moment(score.updatedAt).format('jYYYY/jMM/jDD'),
+          updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
         });
       }
 
@@ -105,11 +102,9 @@ export class ApiScoreService {
     fromAccountNumber: number,
     toAccountNumber: number,
     score: number,
-    userId: string,
+    ip: string,
     referenceCode: number | null,
   ) {
-    let scoreRec: Partial<ScoreInterface>[] | null;
-
     try {
       if (
         score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
@@ -120,7 +115,9 @@ export class ApiScoreService {
             logTypes: logTypes.INFO,
             fileName: 'score.service',
             method: 'transferScore',
-            message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
+            message: `transfer score overflow max transferable score maxTransferableScore:${this.configService.get<string>(
+              'MAX_TRANSFERABLE_SCORE',
+            )} fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber} toNationalCode:${toNationalCode}  toAccountNumber:${toAccountNumber} score:${score}`,
             requestBody: JSON.stringify({
               fromNationalCode,
               fromAccountNumber,
@@ -128,6 +125,7 @@ export class ApiScoreService {
               MAX_TRANSFERABLE_SCORE: this.configService.get<string>(
                 'MAX_TRANSFERABLE_SCORE',
               ),
+              ip
             }),
             stack: '',
           }),
@@ -140,7 +138,7 @@ export class ApiScoreService {
       }
 
       if (
-        fromNationalCode === toNationalCode ||
+        fromNationalCode === toNationalCode &&
         fromAccountNumber === toAccountNumber
       ) {
         throw new BadRequestException({
@@ -150,27 +148,54 @@ export class ApiScoreService {
         });
       }
 
-      try {
-        const scoreFromOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+      //if (fromNationalCode.toString().length < 11) {
+      const scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      const { depositStatus: depositStatusFrom } =
+        await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+          fromAccountNumber,
+        ]);
+
+      if (depositStatusFrom !== 'OPEN') {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'score.service',
+            method: 'transferScore',
+            message: `fromAccountNumber:${fromAccountNumber}  is close`,
+            requestBody: JSON.stringify({
+              fromAccountNumber,
+              toAccountNumber,
+            }),
+            stack: '',
+          }),
+        );
+
+        throw new BadRequestException({
+          message: ErrorMessages.NOTACTIVE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+      // }
+      if (toNationalCode.toString().length < 11) {
         const scoreToOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-        const { depositStatus: depositStatusFrom } =
-          await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-            fromAccountNumber,
-          ]);
-        const { depositStatus: depositStatusTo } =
+          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+        const { depositStatus: depositStatusTo, depositType: depositTypeTo } =
           await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
             toAccountNumber,
           ]);
-        if (depositStatusFrom !== 'OPEN' || depositStatusTo !== 'OPEN') {
+
+        const validDepositTypes = this.validDepositTypes.split(",");
+        if (validDepositTypes.findIndex(item => item.toString() === depositTypeTo.toString()) < 0) {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
               logTypes: logTypes.INFO,
               fileName: 'score.service',
               method: 'transferScore',
-              message: `fromAccountNumber or toAccountNumber is close`,
+              message: `the Account ${toAccountNumber} is not valid type to transfer score`,
               requestBody: JSON.stringify({
                 fromAccountNumber,
                 toAccountNumber,
@@ -185,116 +210,63 @@ export class ApiScoreService {
             error: 'Bad Request',
           });
         }
-      } catch (error) {}
 
+        if (depositStatusTo !== 'OPEN') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `toAccountNumber:${toAccountNumber} is close`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
+            }),
+          );
+
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+      }
       if (referenceCode) {
-        const foundReferenceCode = await this.TransferScoreRepository.findOne({
+        const foundReferenceCode = await this.transferScoreRepository.findOne({
           where: {
             referenceCode,
           },
         });
-        if (foundReferenceCode)
+        if (foundReferenceCode) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'score.service',
+              method: 'transferScore',
+              message: `this referenceCode:${referenceCode} is duplicate`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
+            }),
+          );
+
           throw new ConflictException({
             message: ErrorMessages.REPETITIVE_INFO_FAILED,
             statusCode: HttpStatus.CONFLICT,
             error: 'Conflict',
           });
+        }
       }
 
-      scoreRec = await this.scoreRepository.query(
-        'exec getScores @nationalCode=@0,@accountNumber=@1',
-        [fromNationalCode, fromAccountNumber],
-      );
-      if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message:
-              'ُThere is no record for given fromNationalCode and fromAccountNumber',
-            requestBody: JSON.stringify({
-              fromNationalCode,
-              fromAccountNumber,
-              toNationalCode,
-              toAccountNumber,
-              score,
-              referenceCode: referenceCode ? referenceCode : null,
-            }),
-            stack: '',
-          }),
-        );
-        throw new NotFoundException({
-          message: ErrorMessages.SENDER_NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Not Found',
-        });
-      }
-      if (scoreRec[0].transferableScore! < score) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message: 'Insufficient score to transfer',
-            requestBody: JSON.stringify({
-              fromNationalCode,
-              fromAccountNumber,
-              toNationalCode,
-              toAccountNumber,
-              score,
-              referenceCode: referenceCode ? referenceCode : null,
-            }),
-            stack: '',
-          }),
-        );
-        throw new BadRequestException({
-          message: ErrorMessages.INSUFFICIENT_SCORE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
-      const toRec = await this.scoreRepository.findOne({
-        where: {
-          nationalCode: toNationalCode,
-          accountNumber: toAccountNumber,
-        },
-      });
-      if (!toRec) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'score.service',
-            method: 'transferScore',
-            message:
-              'ُThere is no record for given toNationalCode and toAccountNumber',
-            requestBody: JSON.stringify({
-              toNationalCode,
-              toAccountNumber,
-              score,
-            }),
-            stack: '',
-          }),
-        );
-        throw new NotFoundException({
-          message: ErrorMessages.RECIEVER_NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Not Found',
-        });
-      }
+      return this.sharedProvider.transferScore(fromNationalCode, toNationalCode, fromAccountNumber, toAccountNumber, score, 0, referenceCode);
 
-      const TransferScore = this.TransferScoreRepository.create({
-        fromScore: { id: scoreRec[0].id },
-        toScore: { id: toRec.id },
-        score,
-        userId,
-        referenceCode,
-      });
-      await this.TransferScoreRepository.save(TransferScore);
-      return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
+      // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
       handelError(error, this.eventEmitter, 'score.service', 'transferScore', {
         fromNationalCode,
@@ -316,6 +288,21 @@ export class ApiScoreService {
           referenceCode,
         },
       });
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'usedScore',
+          message: `The referenceCode:${referenceCode} is duplicate`,
+          requestBody: JSON.stringify({
+            nationalCode,
+            accountNumber,
+            score,
+          }),
+          stack: '',
+        }),
+      );
       if (foundReferenceCode)
         throw new ConflictException({
           message: ErrorMessages.REPETITIVE_INFO_FAILED,
@@ -336,8 +323,8 @@ export class ApiScoreService {
           new LogEvent({
             logTypes: logTypes.INFO,
             fileName: 'score.service',
-            method: 'consumeScore',
-            message: 'ُthe Account is not open',
+            method: 'usedScore',
+            message: `The Account:${accountNumber} is not open`,
             requestBody: JSON.stringify({
               nationalCode,
               accountNumber,
@@ -352,39 +339,41 @@ export class ApiScoreService {
           error: 'Bad Request',
         });
       }
-    } catch (error) {}
+    } catch (error) { }
 
-    const scoreRec: Partial<ScoreInterface>[] | null =
-      await this.scoreRepository.query(
-        'exec getScores @nationalCode=@0,@accountNumber=@1',
-        [nationalCode, accountNumber],
-      );
-    if (!scoreRec || scoreRec.length === 0 || !scoreRec[0]?.id) {
-      this.eventEmitter.emit(
-        'logEvent',
-        new LogEvent({
-          logTypes: logTypes.INFO,
-          fileName: 'score.service',
-          method: 'consumeScore',
-          message:
-            'ُThere is no record for given nationalCode and accountNumber',
-          requestBody: JSON.stringify({
-            nationalCode,
-            accountNumber,
-            score,
-          }),
-          stack: '',
-        }),
-      );
-      //throw new NotFoundException(ErrorMessages.NOT_FOUND);
-      throw new NotFoundException({
-        message: ErrorMessages.NOT_FOUND,
-        statusCode: HttpStatus.NOT_FOUND,
-        error: 'Not Found',
-      });
-    }
+    // const scoreRec: ScoreInterface =
+    //   await this.scoreRepository.query(
+    //     'exec getScores @nationalCode=@0,@accountNumber=@1',
+    //     [nationalCode, accountNumber],
+    //   );
+    // const scoreRec = await this.sharedProvider.getScore(accountNumber, nationalCode)
 
-    return this.sharedProvider.consumeScore(scoreRec, score, 0, referenceCode);
+    // if (!scoreRec || scoreRec.length === 0) {
+    //   this.eventEmitter.emit(
+    //     'logEvent',
+    //     new LogEvent({
+    //       logTypes: logTypes.INFO,
+    //       fileName: 'score.service',
+    //       method: 'usedScore',
+    //       message:
+    //         `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
+    //       requestBody: JSON.stringify({
+    //         nationalCode,
+    //         accountNumber,
+    //         score,
+    //       }),
+    //       stack: '',
+    //     }),
+    //   );
+    //   //throw new NotFoundException(ErrorMessages.NOT_FOUND);
+    //   throw new NotFoundException({
+    //     message: ErrorMessages.NOT_FOUND,
+    //     statusCode: HttpStatus.NOT_FOUND,
+    //     error: 'Not Found',
+    //   });
+    // }
+
+    return this.sharedProvider.consumeScore(nationalCode, accountNumber, score, 0, referenceCode);
   }
 
   async getTransferScoreFrom(
@@ -397,15 +386,30 @@ export class ApiScoreService {
         accountNumber: fromAccountNumber,
       },
     });
-    if (!coresRec)
+    if (!coresRec) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'getTransferScoreFrom',
+          message: `The nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} is not found`,
+          requestBody: JSON.stringify({
+            fromNationalCode,
+            fromAccountNumber,
+          }),
+          stack: '',
+        }),
+      );
+
       throw new NotFoundException({
         data: [],
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
-
-    const TransferScoreRec = await this.TransferScoreRepository.find({
+    }
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         fromScore: { id: coresRec.id },
       },
@@ -429,23 +433,38 @@ export class ApiScoreService {
   }
 
   async getTransferScoreTo(
-    fromNationalCode: number,
-    fromAccountNumber: number,
+    toNationalCode: number,
+    toAccountNumber: number,
   ) {
     const coresRec = await this.scoreRepository.findOne({
       where: {
-        nationalCode: fromNationalCode,
-        accountNumber: fromAccountNumber,
+        nationalCode: toNationalCode,
+        accountNumber: toAccountNumber,
       },
     });
-    if (!coresRec)
+    if (!coresRec) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'getTransferScoreTo',
+          message: `The nationalCode:${toNationalCode} accountNumber:${toAccountNumber} is not found`,
+          requestBody: JSON.stringify({
+            toNationalCode,
+            toAccountNumber,
+          }),
+          stack: '',
+        }),
+      );
       throw new NotFoundException({
         data: [],
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
-    const TransferScoreRec = await this.TransferScoreRepository.find({
+    }
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         toScore: { id: coresRec.id },
       },
@@ -469,13 +488,13 @@ export class ApiScoreService {
   }
 
   async getTransferByReferenceCode(referenceCode: number) {
-    const TransferScoreRec = await this.TransferScoreRepository.findOne({
+    const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
         referenceCode,
       },
       relations: ['fromScore', 'toScore'],
     });
-    if (!TransferScoreRec)
+    if (!TransferScoreRec && TransferScoreRec.length === 0)
       throw new NotFoundException({
         data: {},
         message: ErrorMessages.NOT_FOUND,
@@ -483,14 +502,16 @@ export class ApiScoreService {
         error: 'Not Found',
       });
 
+    const totalScore = TransferScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
+
     const data = {
-      score: TransferScoreRec.score,
-      fromAccountNumber: TransferScoreRec.fromScore.accountNumber,
-      fromNationalCode: TransferScoreRec.fromScore.nationalCode,
-      toAccountNumber: TransferScoreRec.toScore.accountNumber,
-      toNationalCode: TransferScoreRec.toScore.nationalCode,
-      referenceCode: TransferScoreRec.referenceCode,
-      createdAt: moment(TransferScoreRec.createdAt).format('jYYYY/jMM/jDD'),
+      score: totalScore,
+      fromAccountNumber: TransferScoreRec[0].fromScore.accountNumber,
+      fromNationalCode: TransferScoreRec[0].fromScore.nationalCode,
+      toAccountNumber: TransferScoreRec[0].toScore.accountNumber,
+      toNationalCode: TransferScoreRec[0].toScore.nationalCode,
+      referenceCode: TransferScoreRec[0].referenceCode,
+      createdAt: moment(TransferScoreRec[0].createdAt).format('jYYYY/jMM/jDD'),
     };
     return {
       data,
@@ -499,7 +520,7 @@ export class ApiScoreService {
     };
   }
   async getUsedScoreByReferenceCode(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode,
       },
@@ -512,14 +533,15 @@ export class ApiScoreService {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
+    const totalScore = usedScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
 
     const data = {
-      score: usedScoreRec.score,
-      accountNumber: usedScoreRec.usedScore.accountNumber,
-      nationalCode: usedScoreRec.usedScore.nationalCode,
-      referenceCode: usedScoreRec.referenceCode,
-      createdAt: moment(usedScoreRec.updatedAt).format('jYYYY/jMM/jDD'),
-      status: usedScoreRec.status,
+      score: totalScore,
+      accountNumber: usedScoreRec[0].usedScore.accountNumber,
+      nationalCode: usedScoreRec[0].usedScore.nationalCode,
+      referenceCode: usedScoreRec[0].referenceCode,
+      createdAt: moment(usedScoreRec[0].updatedAt).format('jYYYY/jMM/jDD'),
+      status: usedScoreRec[0].status,
     };
     return {
       data,
@@ -529,27 +551,29 @@ export class ApiScoreService {
   }
 
   async acceptUsedScore(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode,
       },
     });
 
-    if (!usedScoreRec || usedScoreRec.branchCode)
+    if (!usedScoreRec || usedScoreRec.length === 0)
       throw new NotFoundException({
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
 
-    if (usedScoreRec.status)
+    if (usedScoreRec[0].status)
       throw new BadRequestException({
         message: ErrorMessages.VALIDATE_INFO_FAILED,
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',
       });
-    usedScoreRec.status = true;
-    usedScoreRec.updatedAt = new Date();
+    for (let index = 0; index < usedScoreRec.length; index++) {
+      usedScoreRec[index].status = true;
+      usedScoreRec[index].updatedAt = new Date();
+    }
     try {
       await this.UsedScoreRepository.save(usedScoreRec);
       this.eventEmitter.emit(
@@ -579,27 +603,35 @@ export class ApiScoreService {
   }
 
   async cancleUsedScore(referenceCode: number) {
-    const usedScoreRec = await this.UsedScoreRepository.findOne({
+    const usedScoreRec = await this.UsedScoreRepository.find({
       where: {
         referenceCode: referenceCode,
       },
     });
 
-    if (!usedScoreRec || usedScoreRec.branchCode || usedScoreRec.status)
+    if (!usedScoreRec || usedScoreRec.length === 0)
       throw new NotFoundException({
         message: ErrorMessages.NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
+
+    if (usedScoreRec[0].status)
+      throw new NotFoundException({
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+
     try {
-      await this.UsedScoreRepository.delete(usedScoreRec.id);
+      await this.UsedScoreRepository.remove(usedScoreRec);
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'score.service',
           method: 'cancleUsedScore',
-          message: `Api deleted a usedScore `,
+          message: `Api deleted a usedScore with referenceCode: ${referenceCode}`,
           requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
           stack: '',
         }),

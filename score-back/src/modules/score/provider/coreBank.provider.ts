@@ -13,6 +13,7 @@ export class BankCoreProvider {
   private depositUrl: string;
   private getCustomerDetail: string;
   private apiKey: string;
+
   private expiration: string;
   private userName: string;
   private password: string;
@@ -79,7 +80,7 @@ export class BankCoreProvider {
       //   sessionId,
       //   Number(this.expiration),
       // );
-     
+
       return sessionId;
     } catch (error) {
       this.eventEmitter.emit(
@@ -104,7 +105,11 @@ export class BankCoreProvider {
     try {
       const response = await axios.post(
         url,
-        { ssn: nationalCode.toString().padStart(10, '0') },
+        {
+          ssn: nationalCode.toString().length < 11
+            ? nationalCode.toString().padStart(10, '0') : null,
+          corporationId: nationalCode.toString().length === 11 ? nationalCode.toString() : null
+        },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -123,6 +128,17 @@ export class BankCoreProvider {
           response?.data?.result?.customerBriefDetailInfoBeans[0];
         return { cif, name };
       } else {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'coreBank.provide.ts',
+            method: 'getCustomerBriefDetail',
+            message: `getCustomerBriefDetail not found data for nationalCode:${nationalCode}`,
+            requestBody: JSON.stringify({ nationalCode }),
+            stack: '',
+          }),
+        );
         throw new NotFoundException('مشتری یافت نشد');
       }
     } catch (error) {
@@ -158,7 +174,8 @@ export class BankCoreProvider {
         url,
         {
           cif: cif.toString(),
-          depositNumber: depositNumber.map((d) => d.toString()),
+          //length: 9
+          depositNumbers: depositNumber.map((d) => d.toString())
         },
         {
           headers: {
@@ -174,9 +191,19 @@ export class BankCoreProvider {
       ) {
         return response?.data?.result?.depositBeans[0];
       } else {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'coreBank.provide.ts',
+            method: 'getDepositDetail',
+            message: `deposit not found data for cif:${cif} and depositNumber:${depositNumber}`,
+            requestBody: JSON.stringify({ cif, depositNumber }),
+            stack: '',
+          }),
+        );
         throw new NotFoundException('مشتری یافت نشد');
       }
-      return response.data;
     } catch (error) {
       this.eventEmitter.emit(
         'logEvent',

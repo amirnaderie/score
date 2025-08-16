@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import ConfirmModal from "@/app/components/ConfirmModal";
+import ConfirmModal from "@/app/_components/ConfirmModal";
 
 import toast from "react-hot-toast";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
@@ -23,6 +23,7 @@ interface UsedScore {
   status: boolean;
   personalCode: number | null;
   branchCode: number | null;
+  referenceCode: number | null;
 }
 
 interface ScoreRow {
@@ -83,7 +84,7 @@ export default function Home() {
         setLoading(false);
         return;
       }
-      await fillData(Number(nationalCode));
+      await fillData(Number(nationalCode), 0);
     } catch (e) {
       toast.error("خطا در عملیات!");
     } finally {
@@ -91,10 +92,13 @@ export default function Home() {
     }
   };
 
-  const fillData = async (nationalCode: number) => {
+  const fillData = async (
+    nationalCode: number,
+    selectedScore: number | null
+  ) => {
     try {
       const res = await fetchWithAuthClient(
-        `${process.env.NEXT_PUBLIC_API_URL}/score/${nationalCode}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/front/score/${nationalCode}`,
         {
           credentials: "include",
         }
@@ -110,7 +114,7 @@ export default function Home() {
           (scoresData as any)[0].usedScore &&
           (scoresData as any)[0].usedScore.length > 0
         ) {
-          setSelectedIndex(0);
+          setSelectedIndex(selectedScore ?? 0);
         }
         setData(scoresData);
         setownerFullName(ownerName);
@@ -126,69 +130,69 @@ export default function Home() {
     setConsumeScores((prev) => ({ ...prev, [accountNumber]: digits }));
   };
 
-  const acceptUse = async (id: number) => {
+  const acceptUse = async (referenceCode: number) => {
     setModalContent({
       title: "تایید ثبت نهایی",
       message: "آیا از ثبت نهایی این امتیاز مطمئن هستید؟",
       onConfirm: async () => {
         setIsConfirmModalOpen(false);
-        setSaveUse((prev) => ({ ...prev, [id]: true }));
+        setSaveUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
-            `${process.env.NEXT_PUBLIC_API_URL}/score/accept-use`,
+            `${process.env.NEXT_PUBLIC_API_URL}/front/score/accept-use`,
             {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ usedScoreId: id }),
+              body: JSON.stringify({ referenceCode }),
               credentials: "include",
             }
           );
           const json = await res.json();
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
-            setSaveUse((prev) => ({ ...prev, [id]: false }));
-            await fillData(Number(nationalCode));
+            setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
+            await fillData(Number(nationalCode), selectedIndex);
           } else {
             toast.error("خطا در عملیات!");
           }
         } catch (e) {
           toast.error("خطا در عملیات!");
         } finally {
-          setSaveUse((prev) => ({ ...prev, [id]: false }));
+          setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
         }
       },
     });
     setIsConfirmModalOpen(true);
   };
-  const cancelUse = async (id: number) => {
+  const cancelUse = async (referenceCode: number) => {
     setModalContent({
       title: "تایید لغو امتیاز",
       message: "آیا از لغو این امتیاز مطمئن هستید؟",
       onConfirm: async () => {
         setIsConfirmModalOpen(false);
-        setcancelUse((prev) => ({ ...prev, [id]: true }));
+        setcancelUse((prev) => ({ ...prev, [referenceCode]: true }));
         try {
           const res = await fetchWithAuthClient(
-            `${process.env.NEXT_PUBLIC_API_URL}/score/cancel-use`,
+            `${process.env.NEXT_PUBLIC_API_URL}/front/score/cancel-use`,
             {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ usedScoreId: id }),
+              body: JSON.stringify({ referenceCode }),
               credentials: "include",
             }
           );
           const json = await res.json();
           if (json.statusCode === 200) {
             toast.success("عملیات با موفقیت انجام پذیرفت");
-            setcancelUse((prev) => ({ ...prev, [id]: false }));
-            await fillData(Number(nationalCode));
+            setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
+            await fillData(Number(nationalCode), selectedIndex);
           } else {
             toast.error("خطا در عملیات!");
           }
         } catch (e) {
           toast.error("خطا در عملیات!");
         } finally {
-          setcancelUse((prev) => ({ ...prev, [id]: false }));
+          setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
         }
       },
     });
@@ -214,12 +218,13 @@ export default function Home() {
     }
     try {
       const res = await fetchWithAuthClient(
-        `${process.env.NEXT_PUBLIC_API_URL}/score/consume`,
+        `${process.env.NEXT_PUBLIC_API_URL}/front/score/consume`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            scoreId: currentScore.scoreId,
+            accountNumber: currentScore.accountNumber,
+            nationalCode: nationalCode,
             score: Number(consumeScores[accountNumber]),
           }),
           credentials: "include",
@@ -229,7 +234,7 @@ export default function Home() {
       if (json.statusCode === 200) {
         toast.success("عملیات با موفقیت انجام پذیرفت");
         //setSaveMsg((prev) => ({ ...prev, [accountNumber]: "Saved!" }));
-        await fillData(Number(nationalCode));
+        await fillData(Number(nationalCode), selectedIndex);
       } else {
         // setSaveMsg((prev) => ({
         //   ...prev,
@@ -247,12 +252,9 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center  justify-items-center h-full p-8  gap-14 sm:p-20">
-      <h1 className="text-2xl font-bold text-amber-700">
-        سامانه مدیریت امتیاز تسهیلات
-      </h1>
+    <div className="flex flex-col items-center  justify-items-center h-full p-8  gap-14 sm:p-10">
       <div className="flex flex-col gap-y-2  max-w-md ">
-        <label className="font-semibold">کد ملی :</label>
+        <label className="text-sm">کد یا شناسه ملی :</label>
         <div className="flex gap-2">
           <input
             type="number"
@@ -270,7 +272,8 @@ export default function Home() {
             }}
           />
           <button
-            className="bg-blue-300  w-24  py-2 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+            // className="bg-blue-300  w-24  py-2 rounded  flex justify-center items-center cursor-pointer"
+            className="w-24 bg-blue-500 text-white disabled:opacity-50 flex justify-center items-center py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer"
             onClick={handleFetch}
             disabled={loading || !nationalCode}
           >
@@ -288,8 +291,8 @@ export default function Home() {
         <div className="w-full max-w-4xl  flex flex-col gap-y-10 items-center">
           <div className=" w-full rounded-md overflow-hidden">
             {ownerFullName.length > 0 && (
-              <div className="h-14 w-full flex justify-center items-center bg-cyan-50 font-bold">
-                نام و نام خانوادگی: {ownerFullName}
+              <div className="h-14 w-full flex justify-center items-center bg-cyan-50 font-semibold">
+                نام مشتری: {ownerFullName}
               </div>
             )}
             <div className="w-full border-collapse ">
@@ -454,7 +457,7 @@ export default function Home() {
                                       // }
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        acceptUse(u.id);
+                                        acceptUse(u.referenceCode!);
                                       }}
                                     >
                                       {saveUse[u.id] ? (
@@ -471,7 +474,7 @@ export default function Home() {
                                       // }
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        cancelUse(u.id);
+                                        cancelUse(u.referenceCode!);
                                       }}
                                     >
                                       {calcleUse[u.id] ? (

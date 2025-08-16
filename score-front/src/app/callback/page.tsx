@@ -50,7 +50,7 @@ function AuthCallbackInner() {
             sessionStorage.removeItem("StateAuthCookie");
             const { data: userData } = await response.json();
             updateUserData(userData);
-            router.push("/dashboard/score");
+            router.push("/dashboard");
           } else {
             toast.error("خطا در احراز هویت");
             updateUserData(null);

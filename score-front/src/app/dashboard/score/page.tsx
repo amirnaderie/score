@@ -9,6 +9,7 @@ import {
   handleInput,
   hasAccess,
   validateIranianNationalCode,
+  onlyLettersAndNumbers,
 } from "@/app/lib/utility";
 import { fetchWithAuthClient } from "@/app/lib/fetchWithAuthClient";
 import { UseStore } from "@/store/useStore";
@@ -53,6 +54,12 @@ export default function Home() {
   const [consumeScores, setConsumeScores] = useState<{ [key: string]: string }>(
     {}
   );
+  const [scoreDescriptions, setScoreDescriptions] = useState<{ [key: string]: string }>(
+    {}
+  );
+  const [descriptionErrors, setDescriptionErrors] = useState<{ [key: string]: boolean }>(
+    {}
+  );
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
   const [saveUse, setSaveUse] = useState<{ [key: number]: boolean }>({});
   const [calcleUse, setcancelUse] = useState<{ [key: number]: boolean }>({});
@@ -71,6 +78,18 @@ export default function Home() {
       return acc;
     }, {} as { [key: string]: string });
     setConsumeScores(cleared);
+    
+    const clearedDescriptions = Object.keys(scoreDescriptions).reduce((acc, key) => {
+      acc[key] = "";
+      return acc;
+    }, {} as { [key: string]: string });
+    setScoreDescriptions(clearedDescriptions);
+    
+    const clearedErrors = Object.keys(descriptionErrors).reduce((acc, key) => {
+      acc[key] = false;
+      return acc;
+    }, {} as { [key: string]: boolean });
+    setDescriptionErrors(clearedErrors);
   };
   const handleFetch = async () => {
     setLoading(true);
@@ -226,6 +245,7 @@ export default function Home() {
             accountNumber: currentScore.accountNumber,
             nationalCode: nationalCode,
             score: Number(consumeScores[accountNumber]),
+            description: scoreDescriptions[accountNumber] || "",
           }),
           credentials: "include",
         }
@@ -288,7 +308,7 @@ export default function Home() {
       </div>
 
       {data.length > 0 && (
-        <div className="w-full max-w-4xl  flex flex-col gap-y-10 items-center">
+        <div className="w-[80%]  flex flex-col gap-y-10 items-center">
           <div className=" w-full rounded-md overflow-hidden">
             {ownerFullName.length > 0 && (
               <div className="h-14 w-full flex justify-center items-center bg-cyan-50 font-semibold">
@@ -297,17 +317,20 @@ export default function Home() {
             )}
             <div className="w-full border-collapse ">
               <div className="bg-gray-100 text-sm w-full flex justify-start">
-                <span className=" px-3 py-2 w-[25%] text-center">
+                <span className=" px-3 py-2 w-[20%] text-center">
                   شماره حساب
                 </span>
-                <span className=" px-3 py-2 w-[20%] text-center">
+                <span className=" px-3 py-2 w-[15%] text-center">
                   امتیاز قابل استفاده
                 </span>
-                <span className=" px-3 py-2 w-[20%] text-center">
+                <span className=" px-3 py-2 w-[15%] text-center">
                   امتیاز قابل انتقال
                 </span>
-                <span className=" px-3 py-2 w-[25%] text-center">
+                <span className=" px-3 py-2 w-[20%] text-center">
                   میزان استفاده
+                </span>
+                <span className=" px-3 py-2 w-[20%] text-center">
+                  توضیح
                 </span>
                 {hasAccess(userData?.roles || [], [
                   "score.confirm",
@@ -326,16 +349,16 @@ export default function Home() {
                     }`}
                     onClick={() => setSelectedIndex(idx)}
                   >
-                    <span className=" px-3 py-2 w-[25%] text-center">
+                    <span className=" px-3 py-2 w-[20%] text-center">
                       {row.accountNumber}
                     </span>
-                    <span className=" px-3 py-2  w-[20%] text-center">
+                    <span className=" px-3 py-2  w-[15%] text-center">
                       {Number(row.usableScore).toLocaleString()}
                     </span>
-                    <span className=" px-3 py-2  w-[20%] text-center">
+                    <span className=" px-3 py-2  w-[15%] text-center">
                       {Number(row.transferableScore).toLocaleString()}
                     </span>
-                    <span className=" py-2 flex justify-center w-[25%]">
+                    <span className=" py-2 flex justify-center w-[20%]">
                       <input
                         type="text"
                         inputMode="numeric"
@@ -354,6 +377,34 @@ export default function Home() {
                         onInput={(e) => handleInput(e, 15)}
                       />
                     </span>
+                    <span className=" py-2 flex justify-center w-[20%]">
+                      <input
+                        type="text"
+                        className={`border rounded px-2 py-2 w-[90%] text-xs bg-white ${
+                          descriptionErrors[row.accountNumber] ? 'border-red-500' : ''
+                        }`}
+                        value={scoreDescriptions[row.accountNumber] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setScoreDescriptions((prev) => ({
+                            ...prev,
+                            [row.accountNumber]: value
+                          }));
+                          
+                          // Validate the description
+                          const isValid = onlyLettersAndNumbers(value);
+                          setDescriptionErrors((prev) => ({
+                            ...prev,
+                            [row.accountNumber]: !isValid
+                          }));
+                        }}
+                        maxLength={60}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedIndex(idx);
+                        }}
+                      />
+                    </span>
                     {hasAccess(userData?.roles || [], [
                       "score.confirm",
                       "score.branch",
@@ -364,7 +415,8 @@ export default function Home() {
                           disabled={
                             saving[row.accountNumber] ||
                             !consumeScores[row.accountNumber] ||
-                            Number(consumeScores[row.accountNumber]) <= 0
+                            Number(consumeScores[row.accountNumber]) <= 0 ||
+                            descriptionErrors[row.accountNumber]
                           }
                           onClick={(e) => {
                             e.stopPropagation();

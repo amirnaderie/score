@@ -7,6 +7,7 @@ import {
   MinLength,
   IsInt,
   IsPositive,
+  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -31,4 +32,10 @@ export class CreateUseScoreDto {
   @IsPositive({ message: 'امتیاز باید بزرگتر از صفر باشد' })
   @Type(() => Number)
   score: number;
+
+  // Add this field to the existing CreateUseScoreDto class
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'توضیحات نباید بیشتر از 500 کاراکتر باشد' })
+  description?: string;
 }

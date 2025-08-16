@@ -1,6 +1,7 @@
 import {
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsPositive,
   IsString,
   Matches,
@@ -35,4 +36,9 @@ export class UseScoreDto {
   @Min(10000, { message: 'شناسه ارجاع باید حداقل 5 رقم باشد' })
   @Max(999999999, { message: 'شناسه ارجاع باید حداکثر 9 رقم باشد' })
   referenceCode?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'توضیحات نباید بیشتر از 500 کاراکتر باشد' })
+  description?: string;
 }

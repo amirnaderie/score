@@ -269,7 +269,7 @@ export class AuthService {
         error,
         this.eventEmitter,
         'score.service',
-        'getPersonalData',
+        'getPersonalData calling API named findByCode from afra',
         { personelCode },
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
@@ -298,7 +298,8 @@ export class AuthService {
         error,
         this.eventEmitter,
         'score.service',
-        'signOut',
+        'calling API named revoke from zarrir',
+
         {}
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);

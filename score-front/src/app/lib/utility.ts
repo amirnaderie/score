@@ -85,3 +85,8 @@ export const formatNumber = (value: string) => {
 export const hasAccess = (roles: string[], requiredRoles: string[]) => {
   return roles.some((role) => requiredRoles.includes(role));
 };
+
+export const onlyLettersAndNumbers = (str: string | undefined) => {
+  if (!str) return true;
+  return str && /^[\u0600-\u06FFA-Za-z0-9._/,-\s\u200C]*$/.test(str);
+};

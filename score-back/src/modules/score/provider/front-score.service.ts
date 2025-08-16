@@ -20,6 +20,8 @@ import {
 } from '../dto/paginated-transfer.dto';
 import { TransferScore } from '../entities/transfer-score.entity';
 const moment = require('moment-jalaali');
+import { TransferScoreDescription } from '../entities/transfer-score-description.entity';
+import { UsedScoreDescription } from '../entities/used-score-description.entity';
 
 @Injectable()
 export class FrontScoreService {
@@ -182,6 +184,7 @@ export class FrontScoreService {
       createUseScoreDto.score,
       Number(user.userName),
       null,
+      createUseScoreDto.description,
     );
   }
 
@@ -410,3 +413,4 @@ export class FrontScoreService {
     }
   }
 }
+

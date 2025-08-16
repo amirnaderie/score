@@ -26,7 +26,7 @@ export class APIScoreController {
   constructor(
     private readonly apiScoreService: ApiScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) { }
+  ) {}
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -115,6 +115,7 @@ export class APIScoreController {
       score,
       ip,
       transferScoreDto.referenceCode ?? null,
+      transferScoreDto.description
     );
   }
 
@@ -130,6 +131,7 @@ export class APIScoreController {
       accountNumber,
       score,
       useScoreDto.referenceCode ?? null,
+      useScoreDto.description,
     );
   }
 

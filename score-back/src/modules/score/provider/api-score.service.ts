@@ -40,7 +40,9 @@ export class ApiScoreService {
     private readonly sharedProvider: SharedProvider,
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
-    this.validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
+    this.validDepositTypes = this.configService.get<string>(
+      'VALID_DEPOSIT_TYPES',
+    );
   }
 
   public async findByNationalCode(nationalCode: number) {
@@ -104,6 +106,7 @@ export class ApiScoreService {
     score: number,
     ip: string,
     referenceCode: number | null,
+    description: string,
   ) {
     try {
       if (
@@ -125,7 +128,7 @@ export class ApiScoreService {
               MAX_TRANSFERABLE_SCORE: this.configService.get<string>(
                 'MAX_TRANSFERABLE_SCORE',
               ),
-              ip
+              ip,
             }),
             stack: '',
           }),
@@ -187,8 +190,12 @@ export class ApiScoreService {
             toAccountNumber,
           ]);
 
-        const validDepositTypes = this.validDepositTypes.split(",");
-        if (validDepositTypes.findIndex(item => item.toString() === depositTypeTo.toString()) < 0) {
+        const validDepositTypes = this.validDepositTypes.split(',');
+        if (
+          validDepositTypes.findIndex(
+            (item) => item.toString() === depositTypeTo.toString(),
+          ) < 0
+        ) {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
@@ -264,7 +271,16 @@ export class ApiScoreService {
         }
       }
 
-      return this.sharedProvider.transferScore(fromNationalCode, toNationalCode, fromAccountNumber, toAccountNumber, score, 0, referenceCode);
+      return this.sharedProvider.transferScore(
+        fromNationalCode,
+        toNationalCode,
+        fromAccountNumber,
+        toAccountNumber,
+        score,
+        0,
+        referenceCode,
+        description,
+      );
 
       // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
@@ -281,6 +297,7 @@ export class ApiScoreService {
     accountNumber: number,
     score: number,
     referenceCode: number | null,
+    description: string,
   ) {
     if (referenceCode) {
       const foundReferenceCode = await this.UsedScoreRepository.findOne({
@@ -339,7 +356,7 @@ export class ApiScoreService {
           error: 'Bad Request',
         });
       }
-    } catch (error) { }
+    } catch (error) {}
 
     // const scoreRec: ScoreInterface =
     //   await this.scoreRepository.query(
@@ -373,7 +390,14 @@ export class ApiScoreService {
     //   });
     // }
 
-    return this.sharedProvider.consumeScore(nationalCode, accountNumber, score, 0, referenceCode);
+    return this.sharedProvider.consumeScore(
+      nationalCode,
+      accountNumber,
+      score,
+      0,
+      referenceCode,
+      description,
+    );
   }
 
   async getTransferScoreFrom(
@@ -432,10 +456,7 @@ export class ApiScoreService {
     };
   }
 
-  async getTransferScoreTo(
-    toNationalCode: number,
-    toAccountNumber: number,
-  ) {
+  async getTransferScoreTo(toNationalCode: number, toAccountNumber: number) {
     const coresRec = await this.scoreRepository.findOne({
       where: {
         nationalCode: toNationalCode,
@@ -502,7 +523,10 @@ export class ApiScoreService {
         error: 'Not Found',
       });
 
-    const totalScore = TransferScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
+    const totalScore = TransferScoreRec.reduce(
+      (sum, item) => sum + Number(item.score),
+      0,
+    );
 
     const data = {
       score: totalScore,
@@ -533,7 +557,10 @@ export class ApiScoreService {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
-    const totalScore = usedScoreRec.reduce((sum, item) => sum + Number(item.score), 0);
+    const totalScore = usedScoreRec.reduce(
+      (sum, item) => sum + Number(item.score),
+      0,
+    );
 
     const data = {
       score: totalScore,

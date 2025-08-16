@@ -1,5 +1,4 @@
 import { fetchWithAuthClient } from '@/app/lib/fetchWithAuthClient';
-import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004';
 
@@ -44,10 +43,6 @@ export const transferApi = {
         credentials: "include",
       }
     );
-
-    // const response = await axios.get(`${API_BASE_URL}/front/score/transfers/all`, {
-    //   params,
-    // });
     return res;
   },
 };

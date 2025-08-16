@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { UsedScore } from '../entities/used-score.entity';
@@ -12,6 +17,8 @@ import { LogEvent } from 'src/modules/event/providers/log.event';
 import { Score } from '../entities/score.entity';
 import { ConfigService } from '@nestjs/config';
 import { TransferScore } from '../entities/transfer-score.entity';
+import { TransferScoreDescription } from '../entities/transfer-score-description.entity';
+import { UsedScoreDescription } from '../entities/used-score-description.entity';
 
 @Injectable()
 export class SharedProvider {
@@ -28,7 +35,10 @@ export class SharedProvider {
     private readonly dataSource: DataSource,
     @InjectRepository(TransferScore)
     private readonly transferScoreRepository: Repository<TransferScore>,
-
+    @InjectRepository(TransferScoreDescription)
+    private readonly transferScoreDescriptionRepository: Repository<TransferScoreDescription>,
+    @InjectRepository(UsedScoreDescription)
+    private readonly usedScoreDescriptionRepository: Repository<UsedScoreDescription>,
   ) {
     this.staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
   }
@@ -41,7 +51,7 @@ export class SharedProvider {
       // );
       const scoreRow = await this.scoreRepository.query(
         'exec getScoresOfNationalCode @0, @1, @2',
-        [nationalCode, Number(this.staleMonths), 0]
+        [nationalCode, Number(this.staleMonths), 0],
       );
       return scoreRow;
     } catch (error) {
@@ -84,9 +94,10 @@ export class SharedProvider {
     score: number,
     personalCode: number,
     referenceCode: number | null,
+    description: string | null,
   ) {
     try {
-      const resultScores = await this.getScore(accountNumber, nationalCode)
+      const resultScores = await this.getScore(accountNumber, nationalCode);
 
       if (!resultScores || resultScores.length === 0) {
         this.eventEmitter.emit(
@@ -95,8 +106,7 @@ export class SharedProvider {
             logTypes: logTypes.INFO,
             fileName: 'shared.provider',
             method: 'usedScore',
-            message:
-              `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
+            message: `There is no record in Scores for nationalCode:${nationalCode} and accountNumber:${accountNumber}`,
             requestBody: JSON.stringify({
               nationalCode,
               accountNumber,
@@ -112,7 +122,7 @@ export class SharedProvider {
           error: 'Not Found',
         });
       }
-      const scoreRec = resultScores[0]
+      const scoreRec = resultScores[0];
 
       const now = new Date();
       const formattedDate = now
@@ -120,10 +130,12 @@ export class SharedProvider {
         .slice(2, 10) // skip "20", take "25-MM-DD"
         .replace(/-/g, ''); // YYMMDD
 
-      const timePart = Number(now
-        .toTimeString() // "16:42:05 GMT+0200 ..."
-        .slice(0, 8)    // "16:42:05"
-        .replace(/:/g, '')).toString(); // "164205"
+      const timePart = Number(
+        now
+          .toTimeString() // "16:42:05 GMT+0200 ..."
+          .slice(0, 8) // "16:42:05"
+          .replace(/:/g, ''),
+      ).toString(); // "164205"
 
       if (Number(scoreRec.usableScore) < score) {
         this.eventEmitter.emit(
@@ -152,19 +164,26 @@ export class SharedProvider {
         });
       }
       let personnelData: any = null;
-      let UseScore: any[] = []
+      let UseScore: any[] = [];
       if (personalCode)
         personnelData = await this.authService.getPersonalData(personalCode);
-      let remaindscore = score
-      const validScores = await this.getValidScores(Number(scoreRec.accountNumber), Number(scoreRec.nationalCode))
+      let remaindscore = score;
+
+      const localReferenceCode =
+        referenceCode ??
+        Number(
+          `${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`,
+        );
+      const validScores = await this.getValidScores(
+        Number(scoreRec.accountNumber),
+        Number(scoreRec.nationalCode),
+      );
 
       for (const validScore of validScores) {
-        if (remaindscore === 0)
-          break;
-        if (Number(validScore.usableScore) === 0)
-          continue;
+        if (remaindscore === 0) break;
+        if (Number(validScore.usableScore) === 0) continue;
         if (Number(validScore.usableScore) <= remaindscore) {
-          remaindscore -= Number(validScore.usableScore)
+          remaindscore -= Number(validScore.usableScore);
           const localUseScore = this.UsedScoreRepository.create({
             usedScore: { id: validScore.id },
             score: Number(validScore.usableScore),
@@ -173,11 +192,10 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
+            referenceCode: localReferenceCode,
           });
-          UseScore.push(localUseScore)
-        }
-        else {
+          UseScore.push(localUseScore);
+        } else {
           const localUseScore = this.UsedScoreRepository.create({
             usedScore: { id: validScore.id },
             score: remaindscore,
@@ -186,14 +204,21 @@ export class SharedProvider {
               ? Number(personnelData?.branchCode)
               : null,
             branchName: personnelData?.branchName ?? null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
+            referenceCode: localReferenceCode,
           });
-          remaindscore = 0
-          UseScore.push(localUseScore)
+          remaindscore = 0;
+          UseScore.push(localUseScore);
         }
       }
 
       await this.UsedScoreRepository.save(UseScore);
+      if (description) {
+        const transferDesc = this.usedScoreDescriptionRepository.create({
+          referenceCode: localReferenceCode,
+          description,
+        });
+        await this.usedScoreDescriptionRepository.save(transferDesc);
+      }
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
@@ -204,7 +229,7 @@ export class SharedProvider {
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`),
+            referenceCode: localReferenceCode,
             nationalCode: scoreRec.nationalCode,
             accountNumber: scoreRec.accountNumber,
             usableScore: scoreRec.usableScore,
@@ -224,6 +249,7 @@ export class SharedProvider {
     }
   }
 
+  // Update the transferScore method signature to include description
   async transferScore(
     fromNationalCode: number,
     toNationalCode: number,
@@ -232,9 +258,13 @@ export class SharedProvider {
     score: number,
     personalCode: number,
     referenceCode: number | null,
+    description?: string,
   ) {
     try {
-      const resultScores = await this.getScore(fromAccountNumber, fromNationalCode)
+      const resultScores = await this.getScore(
+        fromAccountNumber,
+        fromNationalCode,
+      );
 
       if (!resultScores || resultScores.length === 0) {
         this.eventEmitter.emit(
@@ -243,8 +273,7 @@ export class SharedProvider {
             logTypes: logTypes.INFO,
             fileName: 'shared.provider',
             method: 'transferScore',
-            message:
-              `There is no record in Scores for nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber}`,
+            message: `There is no record in Scores for nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber}`,
             requestBody: JSON.stringify({
               fromNationalCode,
               fromAccountNumber,
@@ -264,17 +293,19 @@ export class SharedProvider {
           error: 'Not Found',
         });
       }
-      const scoreRec = resultScores[0]
+      const scoreRec = resultScores[0];
       const now = new Date();
       const formattedDate = now
         .toISOString()
         .slice(2, 10) // skip "20", take "25-MM-DD"
         .replace(/-/g, ''); // YYMMDD
 
-      const timePart = Number(now
-        .toTimeString() // "16:42:05 GMT+0200 ..."
-        .slice(0, 8)    // "16:42:05"
-        .replace(/:/g, '')).toString(); // "164205"
+      const timePart = Number(
+        now
+          .toTimeString() // "16:42:05 GMT+0200 ..."
+          .slice(0, 8) // "16:42:05"
+          .replace(/:/g, ''),
+      ).toString(); // "164205"
 
       if (Number(scoreRec.transferableScore) < score) {
         this.eventEmitter.emit(
@@ -305,23 +336,30 @@ export class SharedProvider {
       let personnelData: any = null;
       if (personalCode)
         personnelData = await this.authService.getPersonalData(personalCode);
-      let remaindscore = score
-      const validScores = await this.getValidScores(Number(scoreRec.accountNumber), Number(scoreRec.nationalCode))
+      let remaindscore = score;
+      const validScores = await this.getValidScores(
+        Number(scoreRec.accountNumber),
+        Number(scoreRec.nationalCode),
+      );
+
+      const localReferenceCode =
+        referenceCode ??
+        Number(
+          `${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`,
+        );
 
       for (const validScore of validScores) {
-        if (remaindscore === 0)
-          break;
-        if (Number(validScore.transferableScore) === 0)
-          continue;
+        if (remaindscore === 0) break;
+        if (Number(validScore.transferableScore) === 0) continue;
         if (Number(validScore.transferableScore) <= remaindscore) {
-          remaindscore -= Number(validScore.transferableScore)
+          remaindscore -= Number(validScore.transferableScore);
           const localScore = this.scoreRepository.create({
             accountNumber: toAccountNumber,
             nationalCode: toNationalCode,
             score: 0,
             updatedAt: validScore.updated_at,
           });
-          const savedScore = await this.scoreRepository.save(localScore)
+          const savedScore = await this.scoreRepository.save(localScore);
 
           const localTransferScore = this.transferScoreRepository.create({
             fromScore: { id: validScore.id },
@@ -331,18 +369,17 @@ export class SharedProvider {
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
+            referenceCode: localReferenceCode,
           });
-          await this.transferScoreRepository.save(localTransferScore)
-        }
-        else {
+          await this.transferScoreRepository.save(localTransferScore);
+        } else {
           const localScore = this.scoreRepository.create({
             accountNumber: toAccountNumber,
             nationalCode: toNationalCode,
             score: 0,
             updatedAt: validScore.updated_at,
           });
-          const savedScore = await this.scoreRepository.save(localScore)
+          const savedScore = await this.scoreRepository.save(localScore);
 
           const localTransferScore = this.transferScoreRepository.create({
             fromScore: { id: validScore.id },
@@ -352,11 +389,18 @@ export class SharedProvider {
             branchCode: personnelData?.branchCode
               ? Number(personnelData?.branchCode)
               : null,
-            referenceCode: referenceCode ?? Number(`${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`),
+            referenceCode: localReferenceCode,
           });
-          await this.transferScoreRepository.save(localTransferScore)
-          remaindscore = 0
+          await this.transferScoreRepository.save(localTransferScore);
+          remaindscore = 0;
         }
+      }
+      if (description) {
+        const transferDesc = this.transferScoreDescriptionRepository.create({
+          referenceCode: localReferenceCode,
+          description,
+        });
+        await this.transferScoreDescriptionRepository.save(transferDesc);
       }
       this.eventEmitter.emit(
         'logEvent',
@@ -368,26 +412,34 @@ export class SharedProvider {
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,
-            referenceCode,
             nationalCode: scoreRec.nationalCode,
             accountNumber: scoreRec.accountNumber,
             usableScore: scoreRec.usableScore,
             requestScore: score,
+            referenceCode: localReferenceCode,
           }),
           stack: '',
         }),
       );
       return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
-      handelError(error, this.eventEmitter, 'shared.provider', 'transferScore', {
-        fromNationalCode,
-        fromAccountNumber,
-        toNationalCode,
-        toAccountNumber,
-        score,
-        personalCode,
-        referenceCode,
-      });
+      handelError(
+        error,
+        this.eventEmitter,
+        'shared.provider',
+        'transferScore',
+        {
+          fromNationalCode,
+          fromAccountNumber,
+          toNationalCode,
+          toAccountNumber,
+          score,
+          personalCode,
+          referenceCode,
+        },
+      );
     }
   }
+
+  // After saving transfer scores, save description if provided
 }

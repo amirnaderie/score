@@ -12,12 +12,14 @@ import { APIScoreController } from './controllers/api-score.controller';
 import { FrontScoreService } from './provider/front-score.service';
 import { ApiScoreService } from './provider/api-score.service';
 import { SharedProvider } from './provider/shared.provider';
+import { TransferScoreDescription } from './entities/transfer-score-description.entity';
+import { UsedScoreDescription } from './entities/used-score-description.entity';
 
 @Module({
   imports: [
     AuthModule,
     // RedisModule,
-    TypeOrmModule.forFeature([Score, TransferScore, UsedScore]),
+    TypeOrmModule.forFeature([Score, TransferScore, UsedScore, TransferScoreDescription, UsedScoreDescription]),
     EventModule,
     CacheModule.register(),
   ],
@@ -30,3 +32,5 @@ import { SharedProvider } from './provider/shared.provider';
   ],
 })
 export class ScoreModule {}
+
+

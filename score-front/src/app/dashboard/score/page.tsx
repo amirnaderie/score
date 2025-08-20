@@ -25,6 +25,7 @@ interface UsedScore {
   personalCode: number | null;
   branchCode: number | null;
   referenceCode: number | null;
+  description: string;
 }
 
 interface ScoreRow {
@@ -54,12 +55,12 @@ export default function Home() {
   const [consumeScores, setConsumeScores] = useState<{ [key: string]: string }>(
     {}
   );
-  const [scoreDescriptions, setScoreDescriptions] = useState<{ [key: string]: string }>(
-    {}
-  );
-  const [descriptionErrors, setDescriptionErrors] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [scoreDescriptions, setScoreDescriptions] = useState<{
+    [key: string]: string;
+  }>({});
+  const [descriptionErrors, setDescriptionErrors] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
   const [saveUse, setSaveUse] = useState<{ [key: number]: boolean }>({});
   const [calcleUse, setcancelUse] = useState<{ [key: number]: boolean }>({});
@@ -78,13 +79,16 @@ export default function Home() {
       return acc;
     }, {} as { [key: string]: string });
     setConsumeScores(cleared);
-    
-    const clearedDescriptions = Object.keys(scoreDescriptions).reduce((acc, key) => {
-      acc[key] = "";
-      return acc;
-    }, {} as { [key: string]: string });
+
+    const clearedDescriptions = Object.keys(scoreDescriptions).reduce(
+      (acc, key) => {
+        acc[key] = "";
+        return acc;
+      },
+      {} as { [key: string]: string }
+    );
     setScoreDescriptions(clearedDescriptions);
-    
+
     const clearedErrors = Object.keys(descriptionErrors).reduce((acc, key) => {
       acc[key] = false;
       return acc;
@@ -329,9 +333,7 @@ export default function Home() {
                 <span className=" px-3 py-2 w-[20%] text-center">
                   میزان استفاده
                 </span>
-                <span className=" px-3 py-2 w-[20%] text-center">
-                  توضیح
-                </span>
+                <span className=" px-3 py-2 w-[20%] text-center">توضیح</span>
                 {hasAccess(userData?.roles || [], [
                   "score.confirm",
                   "score.branch",
@@ -381,21 +383,23 @@ export default function Home() {
                       <input
                         type="text"
                         className={`border rounded px-2 py-2 w-[90%] text-xs bg-white ${
-                          descriptionErrors[row.accountNumber] ? 'border-red-500' : ''
+                          descriptionErrors[row.accountNumber]
+                            ? "border-red-500"
+                            : ""
                         }`}
                         value={scoreDescriptions[row.accountNumber] || ""}
                         onChange={(e) => {
                           const value = e.target.value;
                           setScoreDescriptions((prev) => ({
                             ...prev,
-                            [row.accountNumber]: value
+                            [row.accountNumber]: value,
                           }));
-                          
+
                           // Validate the description
                           const isValid = onlyLettersAndNumbers(value);
                           setDescriptionErrors((prev) => ({
                             ...prev,
-                            [row.accountNumber]: !isValid
+                            [row.accountNumber]: !isValid,
                           }));
                         }}
                         maxLength={60}
@@ -453,23 +457,26 @@ export default function Home() {
                       <span className=" px-2 py-1 w-[25%] text-center">
                         امتیاز
                       </span>
-                      <span className=" px-2 py-1 w-[15%] text-center">
+                      <span className=" px-2 py-1 w-[10%] text-center">
                         تاریخ
                       </span>
 
-                      <span className=" px-2 py-1 w-[15%] text-center">
+                      <span className=" px-2 py-1 w-[10%] text-center">
                         کد شعبه
                       </span>
 
-                      <span className=" px-2 py-1 w-[20%] text-center">
+                      <span className=" px-2 py-1 w-[10%] text-center">
                         پرسنلی ثبت کننده
+                      </span>
+                      <span className=" px-2 py-1 w-[25%] text-center">
+                        توضیح
                       </span>
 
                       {hasAccess(userData?.roles || [], [
                         "score.confirm",
                         "score.branch",
                       ]) && (
-                        <span className=" px-2 py-1 w-[30%] text-center">
+                        <span className=" px-2 py-1 w-[20%] text-center">
                           عملیات
                         </span>
                       )}
@@ -477,32 +484,35 @@ export default function Home() {
                     <div className=" max-h-[270px] w-full overflow-y-auto">
                       {data[selectedIndex].usedScore.map((u: UsedScore) => (
                         <div
-                          key={u.id}
+                          key={u.referenceCode}
                           className="w-full flex  h-12 odd:bg-gray-100 even:bg-gray-200 items-center justify-start"
                         >
                           <span className=" px-2 py-1 text-center w-[25%]">
                             {Number(u.score).toLocaleString()}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[15%]">
+                          <span className=" px-2 py-1 text-center w-[10%]">
                             {u.status ? u.updatedAt : "در دست اقدام"}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[15%]">
+                          <span className=" px-2 py-1 text-center w-[10%]">
                             {u.branchCode}
                           </span>
-                          <span className=" px-2 py-1 text-center w-[20%]">
+                          <span className=" px-2 py-1 text-center w-[10%]">
                             {u.personalCode}
+                          </span>
+                          <span className=" px-2 py-1 text-center text-xs w-[25%]">
+                            {u.description}
                           </span>
                           {hasAccess(userData?.roles || [], [
                             "score.confirm",
                             "score.branch",
                           ]) && (
-                            <span className=" px-2 py-1 text-center w-[30%] flex justify-between items-center">
+                            <span className=" px-2 py-1 text-center w-[20%] flex justify-between items-center">
                               {userData &&
                                 userData.branchCode === u.branchCode &&
                                 !u.status && (
                                   <>
                                     <button
-                                      className="bg-green-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                      className="bg-green-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                                       // disabled={
                                       //   saving[row.accountNumber] ||
                                       //   !consumeScores[row.accountNumber]
@@ -519,7 +529,7 @@ export default function Home() {
                                       )}
                                     </button>
                                     <button
-                                      className="bg-red-300 w-[40%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                      className="bg-red-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
                                       // disabled={
                                       //   saving[row.accountNumber] ||
                                       //   !consumeScores[row.accountNumber]

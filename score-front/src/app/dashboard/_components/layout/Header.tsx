@@ -56,7 +56,7 @@ const Header: FC<Props> = (props) => {
           </div>
           <div>
             <div className="dark:hidden flex justify-center ">
-              <Image alt="" width={32} height={32} src={"/images/icon72.png"} />
+              <Image alt="" width={32} height={32} src={"/images/dashboard-icon.png"} />
             </div>
             <div className="hidden dark:flex justify-center">
               <Image

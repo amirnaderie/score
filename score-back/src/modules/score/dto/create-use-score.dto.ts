@@ -12,7 +12,6 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateUseScoreDto {
-
   @IsNotEmpty()
   @IsString()
   @Matches(/^\d+$/, { message: 'شماره حساب باید عددی باشد' })
@@ -36,6 +35,9 @@ export class CreateUseScoreDto {
   // Add this field to the existing CreateUseScoreDto class
   @IsOptional()
   @IsString()
-  @MaxLength(500, { message: 'توضیحات نباید بیشتر از 500 کاراکتر باشد' })
+  @MaxLength(100, { message: 'توضیح نباید بیشتر از 100 کاراکتر باشد' })
+  @Matches(/^[\u0600-\u06FFA-Za-z0-9._/,-\s\u200C]*$/, {
+    message: 'توضیح معتبر نیست',
+  })
   description?: string;
 }

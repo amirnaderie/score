@@ -75,8 +75,8 @@ export class ApiScoreService {
       for (const score of scoresOfNationalCode) {
         scoresRec.push({
           accountNumber: score.accountNumber,
-          usableScore: score.usableScore,
-          transferableScore: score.transferableScore,
+          usableScore: Number(score.usableScore),
+          transferableScore: Number(score.transferableScore),
           depositType: '1206',
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
         });

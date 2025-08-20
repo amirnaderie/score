@@ -14,12 +14,14 @@ export default () => ({
       password: configService.get<string>('DB_PASSWORD'),
       database: configService.get<string>('DB_NAME'),
       entities: [join(__dirname, '../', '**/*.entity.{ts,js}')],
+      migrations: [join(__dirname, '../migrations', '*.{ts,js}')],
       logging: false, // ['query', 'error'],
       autoLoadEntities: true,
       retryAttempts:20,
       retryDelay:4000,
       synchronize:
         configService.get<string>('DB_ALLOW_SYNC_WITH_TYPEORM') === 'true',
+      migrationsRun: configService.get<string>('RUN_MIGRATIONS') === 'true',
       options: {
         encrypt: true,
         trustServerCertificate: true,

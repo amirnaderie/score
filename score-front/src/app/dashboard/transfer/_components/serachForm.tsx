@@ -19,8 +19,8 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
       setNationalCodeError("کد /شناسه ملی الزامی است");
     } else if (!validateIranianNationalCode(Number(value))) {
       setNationalCodeError("کد/شناسه ملی معتبر نیست");
-    // } else if (!/^\d{10}$/.test(value)) {
-    //   setNationalCodeError("کد ملی فقط باید شامل اعداد باشد");
+      // } else if (!/^\d{10}$/.test(value)) {
+      //   setNationalCodeError("کد ملی فقط باید شامل اعداد باشد");
     } else {
       setNationalCodeError("");
     }
@@ -31,8 +31,8 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
       setAccountNumberError("شماره حساب الزامی است");
     } else if (value.length < 4 || value.length > 14) {
       setAccountNumberError("شماره حساب معتبر نیست");
-    // } else if (!/^\d+$/.test(value)) {
-    //   setAccountNumberError("شماره حساب فقط باید شامل اعداد باشد");
+      // } else if (!/^\d+$/.test(value)) {
+      //   setAccountNumberError("شماره حساب فقط باید شامل اعداد باشد");
     } else {
       setAccountNumberError("");
     }
@@ -62,7 +62,6 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
     >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full items-center">
         <div className="h-full">
-
           <label className="block text-sm font-medium text-gray-700 mb-2">
             کد/شناسه ملی
           </label>
@@ -81,6 +80,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
             }`}
             placeholder="کد/شناسه ملی را وارد نمایید"
             maxLength={11}
+            autoFocus
             required
           />
           {nationalCodeError && (
@@ -88,7 +88,6 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
           )}
         </div>
         <div className="h-full">
-
           <label className="block text-sm font-medium text-gray-700 mb-2">
             شماره حساب
           </label>

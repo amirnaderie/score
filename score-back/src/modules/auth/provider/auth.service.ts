@@ -299,7 +299,6 @@ export class AuthService {
         this.eventEmitter,
         'score.service',
         'calling API named revoke from zarrir',
-
         {}
       );
       throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);

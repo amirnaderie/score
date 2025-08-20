@@ -74,8 +74,14 @@ export class FrontScoreService {
         if (scoreRecs && scoreRecs.length > 0) {
           const scoreIds = scoreRecs.map((rec) => rec.id);
 
+
           const usedRecs = await this.usedScoreRepository
             .createQueryBuilder('usedScore')
+            .leftJoin(
+              UsedScoreDescription,
+              'usd',
+              'usd.referenceCode = usedScore.referenceCode'
+            )
             .select([
               'usedScore.referenceCode as referenceCode',
               'SUM(usedScore.score) as score',
@@ -84,14 +90,15 @@ export class FrontScoreService {
               'MAX(usedScore.personalCode) as personalCode',
               'CAST(MIN(CAST(usedScore.status as INT)) as BIT) as status',
               'MAX(usedScore.branchCode) as branchCode',
+              'usd.description as description',
             ])
             .where('usedScore.scoreId IN (:...scoreIds)', { scoreIds })
-            .groupBy('usedScore.referenceCode')
+            .groupBy('usedScore.referenceCode, usd.description')
             .orderBy('MIN(usedScore.createdAt)', 'ASC')
             .getRawMany();
 
           if (usedRecs && usedRecs.length > 0) {
-            usedRecs.map((usedItem: UsedScore) => {
+            usedRecs.map((usedItem: any) => {
               usedScore.push({
                 referenceCode: usedItem.referenceCode,
                 score: usedItem.score,
@@ -101,6 +108,7 @@ export class FrontScoreService {
                 personalCode: usedItem.personalCode,
                 branchCode: usedItem.branchCode,
                 branchName: usedItem.branchName,
+                description: usedItem.description,
               });
             });
           }

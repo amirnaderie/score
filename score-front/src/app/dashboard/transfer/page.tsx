@@ -18,7 +18,7 @@ export default function TransferDashboard() {
     sortOrder: "DESC" as const,
   });
 
-  const fetcher = async (url: string) => {
+  const fetcher = async () => {
     if (!searchParams.nationalCode || !searchParams.accountNumber) return null;
 
     const retVal = await transferApi.getAllTransfers(searchParams);

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "next-themes";
-import TipSvg from "@/assets/svgs/tipSvg";
 
 export const metadata: Metadata = {
   title: "مدیریت امتیاز",
@@ -56,7 +55,7 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={false}
         >
-          {children}
+            {children}
         </ThemeProvider>
       </body>
     </html>

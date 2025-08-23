@@ -67,7 +67,7 @@ const Sidebar: FC<Props> = (props) => {
       isOpen: false,
       children: [
         {
-          label: "گزارش انتقالات",
+          label: "انتقال ها",
           key: "transfer",
           isOpen: false,
           ...MENU_ROLES.score,

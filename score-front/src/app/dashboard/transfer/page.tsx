@@ -6,11 +6,9 @@ import TransferTable from "./_components/transferTable";
 import Pagination from "./_components/pagination";
 import { transferApi, TransferData } from "@/app/dashboard/transfer/api/apis";
 import toast from "react-hot-toast";
+import useSWR from "swr";
 
 export default function TransferDashboard() {
-  const [transfers, setTransfers] = useState<TransferData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useState({
     nationalCode: "",
     accountNumber: "",
@@ -19,40 +17,37 @@ export default function TransferDashboard() {
     sortBy: "date" as const,
     sortOrder: "DESC" as const,
   });
-  const [pagination, setPagination] = useState({
-    total: 0,
-    totalPages: 0,
-  });
 
-  const fetchTransfers = async () => {
-    if (!searchParams.nationalCode || !searchParams.accountNumber) return;
+  const fetcher = async (url: string) => {
+    if (!searchParams.nationalCode || !searchParams.accountNumber) return null;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const retVal = await transferApi.getAllTransfers(searchParams);
-      if (retVal.status !== 200) {
-        toast.error("خطا در واکشی اطلاعات");
-      } else {
-        const resData = await retVal.json();
-        setTransfers(resData.data);
-        setPagination({
-          total: resData.total,
-          totalPages: resData.totalPages,
-        });
-      }
-    } catch (err) {
+    const retVal = await transferApi.getAllTransfers(searchParams);
+    if (retVal.status !== 200) {
       toast.error("خطا در واکشی اطلاعات");
-      console.error(err);
-    } finally {
-      setLoading(false);
+      // throw new Error("Failed to fetch data");
+    } else {
+      const resData = await retVal.json();
+      return resData;
     }
   };
 
+  const { data, error, isLoading } = useSWR(
+    `/api/transfers?nationalCode=${searchParams.nationalCode}&accountNumber=${searchParams.accountNumber}&page=${searchParams.page}&limit=${searchParams.limit}&sortBy=${searchParams.sortBy}&sortOrder=${searchParams.sortOrder}`,
+    fetcher
+  );
+
+  const transfers = data?.data || [];
+  const pagination = {
+    total: data?.total || 0,
+    totalPages: data?.totalPages || 0,
+  };
+  const loading = isLoading;
+
   useEffect(() => {
-    fetchTransfers();
-  }, [searchParams]);
+    if (error) {
+      toast.error("خطا در واکشی اطلاعات");
+    }
+  }, [error]);
 
   const handleSearch = (nationalCode: string, accountNumber: string) => {
     setSearchParams((prev) => ({
@@ -77,7 +72,7 @@ export default function TransferDashboard() {
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+          {error.message}
         </div>
       )}
 

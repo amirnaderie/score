@@ -2,6 +2,7 @@
 
 import { TransferData } from "@/app/dashboard/transfer/api/apis";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
+import TransferTableSkeleton from "./transferTableSkeleton";
 import React from "react";
 
 interface TransferTableProps {
@@ -25,12 +26,7 @@ export default function TransferTable({
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-4 w-full flex justify-center h-full items-center">
-        {" "}
-        <SpinnerSVG className="h-8 w-8 animate-spin text-Secondary-01" />
-      </div>
-    );
+    return <TransferTableSkeleton />;
   }
 
   if (transfers.length === 0) {

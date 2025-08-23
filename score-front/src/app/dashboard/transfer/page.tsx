@@ -33,7 +33,12 @@ export default function TransferDashboard() {
 
   const { data, error, isLoading } = useSWR(
     `/api/transfers?nationalCode=${searchParams.nationalCode}&accountNumber=${searchParams.accountNumber}&page=${searchParams.page}&limit=${searchParams.limit}&sortBy=${searchParams.sortBy}&sortOrder=${searchParams.sortOrder}`,
-    fetcher
+    fetcher,
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
   );
 
   const transfers = data?.data || [];

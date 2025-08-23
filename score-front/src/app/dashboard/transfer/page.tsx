@@ -21,25 +21,34 @@ export default function TransferDashboard() {
   const fetcher = async () => {
     if (!searchParams.nationalCode || !searchParams.accountNumber) return null;
 
-    const retVal = await transferApi.getAllTransfers(searchParams);
-    if (retVal.status !== 200) {
+    try {
+      const response = await transferApi.getAllTransfers(searchParams);
+
+      if (response.status !== 200) {
+        toast.error("خطا در واکشی اطلاعات");
+        throw new Error(`HTTP ${response.status}: Failed to fetch transfers`);
+      }
+
+      return await response.json();
+    } catch (error) {
       toast.error("خطا در واکشی اطلاعات");
-      // throw new Error("Failed to fetch data");
-    } else {
-      const resData = await retVal.json();
-      return resData;
+      throw error; // Let SWR handle the error state
     }
   };
 
-  const { data, error, isLoading } = useSWR(
-    `/api/transfers?nationalCode=${searchParams.nationalCode}&accountNumber=${searchParams.accountNumber}&page=${searchParams.page}&limit=${searchParams.limit}&sortBy=${searchParams.sortBy}&sortOrder=${searchParams.sortOrder}`,
-    fetcher,
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+  // Create a more manageable key
+  const transfersKey =
+    !searchParams.nationalCode || !searchParams.accountNumber
+      ? null
+      : ["transfers", searchParams];
+
+  const { data, error, isLoading } = useSWR(transfersKey, fetcher, {
+    dedupingInterval: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    revalidateIfStale: true, // Auto-refetch stale data
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    refreshInterval: 10 * 60 * 1000, // Optional: Auto-refresh every 10 minutes
+  });
 
   const transfers = data?.data || [];
   const pagination = {

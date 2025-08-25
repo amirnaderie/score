@@ -16,4 +16,5 @@ export const ErrorMessages = {
   NOTACTIVE: 'حساب فعال یا معتبر نیست',
   OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است',
   FORBIDDEN: 'عدم مجوز دسترسی',
+  USER_NOT_FOUND: 'اطلاعات کاربر در سامانه افرا یافت نشد',
 };

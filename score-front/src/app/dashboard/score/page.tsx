@@ -176,7 +176,7 @@ export default function Home() {
             setSaveUse((prev) => ({ ...prev, [referenceCode]: false }));
             await fillData(Number(nationalCode), selectedIndex);
           } else {
-            toast.error("خطا در عملیات!");
+            toast.error(json.message);
           }
         } catch (e) {
           toast.error("خطا در عملیات!");
@@ -210,7 +210,7 @@ export default function Home() {
             setcancelUse((prev) => ({ ...prev, [referenceCode]: false }));
             await fillData(Number(nationalCode), selectedIndex);
           } else {
-            toast.error("خطا در عملیات!");
+            toast.error(json.message);
           }
         } catch (e) {
           toast.error("خطا در عملیات!");

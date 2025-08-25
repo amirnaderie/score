@@ -36,7 +36,7 @@ export class FrontScoreService {
     private readonly transferScoreRepository: Repository<TransferScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) { }
+  ) {}
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -74,13 +74,12 @@ export class FrontScoreService {
         if (scoreRecs && scoreRecs.length > 0) {
           const scoreIds = scoreRecs.map((rec) => rec.id);
 
-
           const usedRecs = await this.usedScoreRepository
             .createQueryBuilder('usedScore')
             .leftJoin(
               UsedScoreDescription,
               'usd',
-              'usd.referenceCode = usedScore.referenceCode'
+              'usd.referenceCode = usedScore.referenceCode',
             )
             .select([
               'usedScore.referenceCode as referenceCode',
@@ -128,8 +127,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-
-      } catch { }
+      } catch {}
       return {
         data: {
           scoresRec,
@@ -209,13 +207,25 @@ export class FrontScoreService {
       !usedScoreRec ||
       usedScoreRec.length === 0 ||
       usedScoreRec[0].branchCode !== Number(userData.branchCode)
-    )
+    ) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'acceptUsedScore',
+          message: `There is no record for personalCode:${user.userName} branchCode:${userData.branchCode} in afra`,
+          requestBody: JSON.stringify({ referenceCode, user }),
+          stack: JSON.stringify(userData),
+        }),
+      );
       throw new NotFoundException({
         data: [],
-        message: ErrorMessages.NOT_FOUND,
+        message: ErrorMessages.USER_NOT_FOUND,
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
       });
+    }
     for (let index = 0; index < usedScoreRec.length; index++) {
       usedScoreRec[index].status = true;
       usedScoreRec[index].updatedAt = new Date();
@@ -421,4 +431,3 @@ export class FrontScoreService {
     }
   }
 }
-

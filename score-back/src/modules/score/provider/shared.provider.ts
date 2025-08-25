@@ -172,7 +172,7 @@ export class SharedProvider {
       const localReferenceCode =
         referenceCode ??
         Number(
-          `${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`,
+          `${formattedDate}${timePart}${Number(personnelData?.branchCode.slice(-2)).toString()}`,
         );
       const validScores = await this.getValidScores(
         Number(scoreRec.accountNumber),
@@ -345,7 +345,7 @@ export class SharedProvider {
       const localReferenceCode =
         referenceCode ??
         Number(
-          `${formattedDate}${timePart}${Number(personnelData?.branchCode).toString()}`,
+          `${formattedDate}${timePart}${Number(personnelData?.branchCode.slice(-2)).toString()}`,
         );
 
       for (const validScore of validScores) {

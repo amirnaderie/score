@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   score-back:
-    image: score-back:1.0.10
+    image: score-back:1.0.11
     build:
       context: ./score-back
       dockerfile: Dockerfile

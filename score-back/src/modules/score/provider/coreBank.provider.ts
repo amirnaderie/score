@@ -106,9 +106,14 @@ export class BankCoreProvider {
       const response = await axios.post(
         url,
         {
-          ssn: nationalCode.toString().length < 11
-            ? nationalCode.toString().padStart(10, '0') : null,
-          corporationId: nationalCode.toString().length === 11 ? nationalCode.toString() : null
+          ssn:
+            nationalCode.toString().length < 11
+              ? nationalCode.toString().padStart(10, '0')
+              : null,
+          corporationId:
+            nationalCode.toString().length === 11
+              ? nationalCode.toString()
+              : null,
         },
         {
           headers: {
@@ -174,8 +179,8 @@ export class BankCoreProvider {
         url,
         {
           cif: cif.toString(),
-          //length: 9
-          depositNumbers: depositNumber.map((d) => d.toString())
+          depositNumber: depositNumber.map((d) => d.toString()),
+          length: 10,
         },
         {
           headers: {
@@ -189,7 +194,24 @@ export class BankCoreProvider {
         response.status == 200 &&
         response?.data?.result?.depositBeans.length > 0
       ) {
-        return response?.data?.result?.depositBeans[0];
+        const foundDeposit = response?.data?.result?.depositBeans.find(
+          (item) => item.depositNumber === depositNumber[0].toString(),
+        );
+        if (!foundDeposit) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'coreBank.provide.ts',
+              method: 'getDepositDetail',
+              message: `deposit not found data for cif:${cif} and depositNumber:${depositNumber}`,
+              requestBody: JSON.stringify({ cif, depositNumber }),
+              stack: '',
+            }),
+          );
+          throw new NotFoundException('مشتری یافت نشد');
+        }
+        return foundDeposit;
       } else {
         this.eventEmitter.emit(
           'logEvent',

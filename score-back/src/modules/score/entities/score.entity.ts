@@ -2,6 +2,9 @@ import { BaseEntity, Column, Entity, Index, OneToMany } from 'typeorm';
 import { TransferScore } from './transfer-score.entity';
 import { UsedScore } from './used-score.entity';
 
+const tehranNowSql = () =>
+  "SWITCHOFFSET(SYSDATETIMEOFFSET(), DATEPART(TZOFFSET, SYSDATETIMEOFFSET() AT TIME ZONE 'Iran Standard Time'))";
+
 @Index('IX_Scores_nationalCode_accountNumber', ['nationalCode', 'accountNumber','updatedAt']) // 👈 Composite index here
 
 @Entity('Scores')
@@ -52,4 +55,14 @@ export class Score extends BaseEntity {
     nullable: true,
   })
   updatedAt: Date;
+  
+  @Column({
+    name: 'inserted_at',
+    type: 'datetime2',
+    precision: 0,
+    select: true,
+    nullable: true,
+    default: () => tehranNowSql(),
+  })
+  insertedAt: Date;
 }

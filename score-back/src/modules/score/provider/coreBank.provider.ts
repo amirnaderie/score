@@ -180,7 +180,7 @@ export class BankCoreProvider {
         {
           cif: cif.toString(),
           depositNumber: depositNumber.map((d) => d.toString()),
-          length: 10,
+          length: 100,
         },
         {
           headers: {

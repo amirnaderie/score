@@ -50,4 +50,4 @@ EXPOSE 3002
 CMD npm run start:prod
 
 # docker build -t score-front:v1.0.4 .
-# docker save score-front > score-front1.0.4.tar
+# docker save score-front > score-front1.0.12.tar

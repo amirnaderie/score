@@ -20,7 +20,7 @@ interface Props {
 
 const Header: FC<Props> = (props) => {
   const { navState } = props;
-    const router = useRouter();
+  const router = useRouter();
 
   const signOut = async () => {
     try {
@@ -31,14 +31,16 @@ const Header: FC<Props> = (props) => {
           credentials: "include", // Important!
         }
       );
-      if (response.ok) {
-        toast.success("خروج موفق");
-        router.push(`${process.env.NEXT_PUBLIC_SSO_URI}api/auth/logout`);
-      } else {
-        toast.error("خطا در خروج");
-      }
+      // if (response.ok) {
+      //   toast.success("خروج موفق");
+      // router.push(`${process.env.NEXT_PUBLIC_SSO_URI}api/auth/logout`);
+      // } else {
+      //   toast.error("خطا در خروج");
+      // }
     } catch (error) {
       toast.error("خطا در خروج");
+    } finally {
+      router.push(`${process.env.NEXT_PUBLIC_SSO_URI}api/auth/logout`);
     }
   };
   return (
@@ -56,7 +58,12 @@ const Header: FC<Props> = (props) => {
           </div>
           <div>
             <div className="dark:hidden flex justify-center ">
-              <Image alt="" width={32} height={32} src={"/images/dashboard-icon.png"} />
+              <Image
+                alt=""
+                width={32}
+                height={32}
+                src={"/images/dashboard-icon.png"}
+              />
             </div>
             <div className="hidden dark:flex justify-center">
               <Image

@@ -159,7 +159,7 @@ export class ApiScoreService {
           fromAccountNumber,
         ]);
 
-      if (depositStatusFrom !== 'OPEN') {
+      if (depositStatusFrom === 'CLOSE') {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
@@ -334,7 +334,7 @@ export class ApiScoreService {
         await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
           accountNumber,
         ]);
-      if (depositStatus !== 'OPEN') {
+      if (depositStatus === 'CLOSE') {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({

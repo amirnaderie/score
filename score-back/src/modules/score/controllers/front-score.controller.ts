@@ -11,6 +11,7 @@ import {
   Put,
   Delete,
   Query,
+  Patch,
 } from '@nestjs/common';
 
 import { Roles } from 'src/decorators/roles.decorator';
@@ -22,10 +23,45 @@ import { GetUser } from 'src/decorators/getUser.decorator';
 import { CreateUseScoreDto } from '../dto/create-use-score.dto';
 import { FrontScoreService } from '../provider/front-score.service';
 import { PaginatedTransferDto } from '../dto/paginated-transfer.dto';
+import { GetScoreDto } from '../dto/get-score.dto';
+import { CreateScoreDto } from '../dto/create-score.dto';
+import { UpdateScoreDto } from '../dto/update-score.dto';
 
 @Controller('front/score')
 export class FrontScoreController {
   constructor(private readonly frontScoreService: FrontScoreService) { }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.view', 'score.confirm', 'score.branch')
+  @Get('scores')
+  async getScore(
+    @Query() getScoreDto: GetScoreDto,
+  ) {
+    const { nationalCode, accountNumber } = getScoreDto;
+    return this.frontScoreService.findScoreByNationalCodeAndAccountNumber(
+      nationalCode,
+      accountNumber,
+    );
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm')
+  @Post('scores')
+  @HttpCode(200)
+  async createScore(@Body() createScoreDto: CreateScoreDto, @GetUser() user: User) {
+    return this.frontScoreService.createScore(createScoreDto, user);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm')
+  @Patch('scores/:id')
+  async updateScore(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateScoreDto: UpdateScoreDto,
+    @GetUser() user: User
+  ) {
+    return this.frontScoreService.updateScore(id, updateScoreDto, user);
+  }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.view', 'score.confirm', 'score.branch')
@@ -91,7 +127,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch','score.view')
+  @Roles('score.confirm', 'score.branch', 'score.view')
   @Get('transfers/all')
   async getAllTransfersPaginated(@Query() query: PaginatedTransferDto) {
     const nationalCode = Number(query.nationalCode);

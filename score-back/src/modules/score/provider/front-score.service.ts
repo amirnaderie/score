@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,6 +22,8 @@ import { TransferScore } from '../entities/transfer-score.entity';
 const moment = require('moment-jalaali');
 import { TransferScoreDescription } from '../entities/transfer-score-description.entity';
 import { UsedScoreDescription } from '../entities/used-score-description.entity';
+import { UpdateScoreDto } from '../dto/update-score.dto';
+import { CreateScoreDto } from '../dto/create-score.dto';
 
 @Injectable()
 export class FrontScoreService {
@@ -36,7 +38,7 @@ export class FrontScoreService {
     private readonly transferScoreRepository: Repository<TransferScore>,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -127,7 +129,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+      } catch { }
       return {
         data: {
           scoresRec,
@@ -427,6 +429,237 @@ export class FrontScoreService {
           sortBy,
           sortOrder,
         },
+      );
+    }
+  }
+
+  public async findScoreByNationalCodeAndAccountNumber(
+    nationalCode: string,
+    accountNumber: string,
+  ) {
+    try {
+      const score = await this.scoreRepository.findOne({
+        where: {
+          nationalCode: Number(nationalCode),
+          accountNumber: Number(accountNumber),
+        },
+        order: {
+          id: 'ASC',
+        },
+      });
+
+      if (!score) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'front-score.service',
+            method: 'findScoreByNationalCodeAndAccountNumber',
+            message: `No score found for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}`,
+            requestBody: JSON.stringify({ nationalCode, accountNumber }),
+            stack: '',
+          }),
+        );
+        throw new NotFoundException({
+          data: null,
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Score not found',
+        });
+      }
+
+      return {
+        data: score,
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'findScoreByNationalCodeAndAccountNumber',
+        { nationalCode, accountNumber },
+      );
+    }
+  }
+
+  public async createScore(createScoreDto: CreateScoreDto, user: User) {
+    try {
+      const { nationalCode, accountNumber, score, updatedAt } = createScoreDto;
+
+      try {
+        const scoreOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+        const { depositStatus: depositStatus } =
+          await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
+            accountNumber,
+          ]);
+        if (depositStatus === 'CLOSE') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'front-score.service',
+              method: 'createScore',
+              message: `The Account:${accountNumber} is not open`,
+              requestBody: JSON.stringify({
+                nationalCode,
+                accountNumber,
+                score,
+              }),
+              stack: '',
+            }),
+          );
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+      } catch (error) {
+        throw new BadRequestException({
+          message: ErrorMessages.NOTACTIVE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      const newScore = this.scoreRepository.create({
+
+        nationalCode: Number(nationalCode),
+        accountNumber: Number(accountNumber),
+        score: score,
+        updatedAt: new Date(updatedAt),
+        insertedAt: new Date(),
+      });
+
+      const savedScore = await this.scoreRepository.save(newScore);
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'createScore',
+          message: `Score created successfully for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}, score: ${createScoreDto.score} by personalCode:${user.userName}`,
+          requestBody: JSON.stringify(createScoreDto),
+          stack: '',
+        }),
+      );
+
+      return {
+        data: savedScore,
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 201,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'createScore',
+        createScoreDto,
+      );
+    }
+  }
+
+  public async updateScore(id: number, updateScoreDto: UpdateScoreDto, user: User) {
+    try {
+      const score = await this.scoreRepository.findOne({
+        where: { id },
+      });
+      const { nationalCode, accountNumber } = score
+      try {
+        const scoreOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+        const { depositStatus: depositStatus } =
+          await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
+            accountNumber,
+          ]);
+        if (depositStatus === 'CLOSE') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'front-score.service',
+              method: 'createScore',
+              message: `The Account:${accountNumber} is not open`,
+              requestBody: JSON.stringify({
+                nationalCode,
+                accountNumber,
+                score,
+              }),
+              stack: '',
+            }),
+          );
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+      } catch (error) {
+        throw new BadRequestException({
+          message: ErrorMessages.NOTACTIVE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      if (!score) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'front-score.service',
+            method: 'updateScore',
+            message: `Score not found with id: ${id}`,
+            requestBody: JSON.stringify({ id, updateScoreDto }),
+            stack: '',
+          }),
+        );
+        throw new NotFoundException({
+          data: null,
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Score not found',
+        });
+      }
+
+      if (updateScoreDto.score !== undefined) {
+        score.score = updateScoreDto.score;
+      }
+      if (updateScoreDto.updatedAt !== undefined) {
+        score.updatedAt = new Date(updateScoreDto.updatedAt);
+      }
+
+      const updatedScore = await this.scoreRepository.save(score);
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'updateScore',
+          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${score.score}, scoreAfter:${updateScoreDto.score} by personalCode:${user.userName}`,
+          requestBody: JSON.stringify({ id, updateScoreDto }),
+          stack: '',
+        }),
+      );
+
+      return {
+        data: updatedScore,
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'updateScore',
+        { id, updateScoreDto },
       );
     }
   }

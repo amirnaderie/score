@@ -1,13 +1,27 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+import { fetchWithAuthClient } from "@/app/lib/fetchWithAuthClient";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+};
 
 export const ScoreApi = {
   getScoreByNationalCodeAndAccountNumber: async (
     nationalCode: string,
     accountNumber: string
   ) => {
-    return fetch(
-      `${BASE_URL}/scores?nationalCode=${nationalCode}&accountNumber=${accountNumber}`
+    return fetchWithAuthClient(
+      `${process.env.NEXT_PUBLIC_API_URL}/front/score/scores?nationalCode=${nationalCode}&accountNumber=${accountNumber}`,
+      {
+        credentials: "include",
+      }
     );
+
   },
 
   createScore: async (scoreData: {
@@ -16,22 +30,26 @@ export const ScoreApi = {
     score: number;
     updatedAt: string;
   }) => {
-    return fetch(`${BASE_URL}/scores`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(scoreData),
-    });
+    return fetchWithAuthClient(
+      `${BASE_URL}/front/score/scores`,
+      {
+        method: "POST",
+        body: JSON.stringify(scoreData),
+        credentials: "include",
+      }
+    );
+
   },
 
   updateScore: async (id: number, score: number, updatedAt: string) => {
-    return fetch(`${BASE_URL}/scores/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ score, updatedAt }),
-    });
+    return fetchWithAuthClient(
+      `${BASE_URL}/front/score/scores/${id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ score, updatedAt }),
+        credentials: "include",
+      }
+    );
+
   },
 };

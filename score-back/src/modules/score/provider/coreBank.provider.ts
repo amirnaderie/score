@@ -179,8 +179,7 @@ export class BankCoreProvider {
         url,
         {
           cif: cif.toString(),
-          depositNumber: depositNumber.map((d) => d.toString()),
-          length: 100,
+          depositNumbers: depositNumber.map((d) => d.toString()),
         },
         {
           headers: {
@@ -197,7 +196,7 @@ export class BankCoreProvider {
         const foundDeposit = response?.data?.result?.depositBeans.find(
           (item) => item.depositNumber === depositNumber[0].toString(),
         );
-        if (!foundDeposit) {
+        if (!foundDeposit|| foundDeposit.depositType!==1206 ) {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
@@ -209,7 +208,7 @@ export class BankCoreProvider {
               stack: '',
             }),
           );
-          throw new NotFoundException('مشتری یافت نشد');
+          throw new NotFoundException('حساب یافت نشد');
         }
         return foundDeposit;
       } else {

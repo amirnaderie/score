@@ -59,6 +59,12 @@ const Sidebar: FC<Props> = (props) => {
           ...MENU_ROLES.score,
           //roles: ['score.view', 'score.confirm', 'score.branch']
         },
+        {
+          label: "مدیریت امتیاز",
+          key: "support",
+          isOpen: false,
+          ...MENU_ROLES.score,
+        },
       ],
     },
     {

@@ -19,7 +19,7 @@ export const generateToken = (length: number): string => {
 };
 
 export const validateIranianNationalCode = (nationalCode: number) => {
-  
+
   if (nationalCode.toString().length === 11)
     return true
 
@@ -90,3 +90,7 @@ export const onlyLettersAndNumbers = (str: string | undefined) => {
   if (!str) return true;
   return str && /^[\u0600-\u06FFA-Za-z0-9._/,-\s\u200C]*$/.test(str);
 };
+
+export const toEnglishDigits=(str:string)=> {
+  return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
+}

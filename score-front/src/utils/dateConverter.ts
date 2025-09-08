@@ -1,3 +1,4 @@
+import { toEnglishDigits } from "@/app/lib/utility";
 import moment from "moment-jalaali";
 
 export const convertToGregorian = (persianDate: string): string | null => {
@@ -6,18 +7,23 @@ export const convertToGregorian = (persianDate: string): string | null => {
     return null; // Invalid format
   }
 
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
+  const year = parseInt(toEnglishDigits(parts[0]), 10);
+  const month = parseInt(toEnglishDigits(parts[1]), 10);
+  const day = parseInt(toEnglishDigits(parts[2]), 10);
 
-  // Check if the date is already in Gregorian format (e.g., 2023/04/04)
-  if (year > 1500) { // A simple heuristic to check for Gregorian year
-    // Assume it's already Gregorian, just reformat if needed
-    const date = new Date(persianDate);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
+if (isNaN(year) || isNaN(month) || isNaN(day)) {
     return null;
+  }
+
+  // Simple range checks before Moment
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  // Gregorian check
+  if (year > 1500) {
+    const date = new Date(`${year}-${month}-${day}`);
+    return isNaN(date.getTime()) ? null : date.toISOString().split("T")[0];
   }
 
   // Assume it's Persian (Jalali) and convert

@@ -129,7 +129,6 @@ export default function SupportPage() {
       toast.error("لطفاً تمام فیلدها را پر کنید");
       return;
     }
-
     setLoading(true);
     try {
       const gregorianDate = convertToGregorian(updatedAt);
@@ -220,10 +219,9 @@ export default function SupportPage() {
   };
 
   return (
-    <div>
-    <div className="bg-white py-2 px-4 rounded-lg shadow-md h-30">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full items-center">
-        <div className="h-full">
+    <div className="h-full flex flex-col gap-y-2">
+      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-end h-24 bg-white py-2 px-4 rounded-lg shadow-md">
+        <div >
           <label
             htmlFor="nationalCode"
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -253,7 +251,7 @@ export default function SupportPage() {
           )}
         </div>
 
-        <div className="h-full">
+        <div >
           <label
             htmlFor="accountNumber"
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -281,7 +279,7 @@ export default function SupportPage() {
             <p className="text-red-500 text-xs mt-1">{accountNumberError}</p>
           )}
         </div>
-        <div className="flex items-center h-full pb-2">
+        <div >
           <button
             onClick={handleSearch}
             disabled={
@@ -355,10 +353,10 @@ export default function SupportPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {persianDate}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium ">
                         <button
                           onClick={() => handleSelectScore(scoreItem)}
-                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer"
                         >
                           انتخاب
                         </button>
@@ -433,7 +431,6 @@ export default function SupportPage() {
                         value.slice(6, 8);
                     }
                   }
-
                   setUpdatedAt(formatted);
                 }}
                 maxLength={10}
@@ -446,7 +443,7 @@ export default function SupportPage() {
             <button
               onClick={handleSubmit}
               disabled={loading || !score || !updatedAt}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 cursor-pointer rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
             >
               {loading
                 ? "در حال ذخیره..."
@@ -467,14 +464,13 @@ export default function SupportPage() {
                   setShowScoresList(true);
                 }
               }}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-md transition duration-200"
+              className="bg-gray-500 hover:bg-gray-600 text-white cursor-pointer font-bold py-2 px-6 rounded-md transition duration-200"
             >
               {isEditing ? "انصراف" : "پاک کردن فرم"}
             </button>
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

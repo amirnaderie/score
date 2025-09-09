@@ -63,7 +63,7 @@ const Sidebar: FC<Props> = (props) => {
           label: "مدیریت امتیاز",
           key: "support",
           isOpen: false,
-          ...MENU_ROLES.score,
+          roles: ["score.confirm"],
         },
       ],
     },

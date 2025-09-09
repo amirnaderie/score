@@ -438,41 +438,81 @@ export class FrontScoreService {
     accountNumber: string,
   ) {
     try {
-      const score = await this.scoreRepository.findOne({
-        where: {
-          nationalCode: Number(nationalCode),
-          accountNumber: Number(accountNumber),
-        },
-        order: {
-          id: 'ASC',
-        },
-      });
-
-      if (!score) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'front-score.service',
-            method: 'findScoreByNationalCodeAndAccountNumber',
-            message: `No score found for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}`,
-            requestBody: JSON.stringify({ nationalCode, accountNumber }),
-            stack: '',
-          }),
-        );
-        throw new NotFoundException({
-          data: null,
-          message: ErrorMessages.NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Score not found',
+      // If accountNumber is provided, find all scores that match both nationalCode and accountNumber
+      if (accountNumber) {
+        const scores = await this.scoreRepository.find({
+          where: {
+            nationalCode: Number(nationalCode),
+            accountNumber: Number(accountNumber),
+          },
+          order: {
+            id: 'ASC',
+          },
         });
-      }
 
-      return {
-        data: score,
-        message: ErrorMessages.SUCCESSFULL,
-        statusCode: 200,
-      };
+        if (!scores || scores.length === 0) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'front-score.service',
+              method: 'findScoreByNationalCodeAndAccountNumber',
+              message: `No scores found for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}`,
+              requestBody: JSON.stringify({ nationalCode, accountNumber }),
+              stack: '',
+            }),
+          );
+          throw new NotFoundException({
+            data: null,
+            message: ErrorMessages.NOT_FOUND,
+            statusCode: HttpStatus.NOT_FOUND,
+            error: 'Scores not found',
+          });
+        }
+
+        return {
+          data: scores,
+          message: ErrorMessages.SUCCESSFULL,
+          statusCode: 200,
+        };
+      }
+      // If only nationalCode is provided, find all scores for that nationalCode
+      else {
+        const scores = await this.scoreRepository.find({
+          where: {
+            nationalCode: Number(nationalCode),
+          },
+          order: {
+            id: 'ASC',
+          },
+        });
+
+        if (!scores || scores.length === 0) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'front-score.service',
+              method: 'findScoreByNationalCodeAndAccountNumber',
+              message: `No scores found for nationalCode: ${nationalCode}`,
+              requestBody: JSON.stringify({ nationalCode }),
+              stack: '',
+            }),
+          );
+          throw new NotFoundException({
+            data: null,
+            message: ErrorMessages.NOT_FOUND,
+            statusCode: HttpStatus.NOT_FOUND,
+            error: 'Scores not found',
+          });
+        }
+
+        return {
+          data: scores,
+          message: ErrorMessages.SUCCESSFULL,
+          statusCode: 200,
+        };
+      }
     } catch (error) {
       handelError(
         error,
@@ -568,10 +608,12 @@ export class FrontScoreService {
           error: 'Score not found',
         });
       }
-
+      const beforScore = score.score
       if (updateScoreDto.score !== undefined) {
         score.score = updateScoreDto.score;
       }
+      const date = new Date(score.updatedAt);
+      const beforUpdatedAt = date.toLocaleDateString('sv-SE');
       if (updateScoreDto.updatedAt !== undefined) {
         score.updatedAt = new Date(updateScoreDto.updatedAt);
       }
@@ -584,7 +626,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'updateScore',
-          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${score.score}, scoreAfter:${updateScoreDto.score} by personalCode:${user.userName}`,
+          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${beforScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter:${updateScoreDto.score}, afterUpdatedAt: ${updateScoreDto.updatedAt} by personalCode:${user.userName}`,
           requestBody: JSON.stringify({ id, updateScoreDto }),
           stack: '',
         }),

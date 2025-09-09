@@ -43,6 +43,25 @@ export class FrontScoreController {
       accountNumber,
     );
   }
+  
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.view', 'score.confirm', 'score.branch')
+  @Get('scores/by-national-code/:nationalCode')
+  async getScoresByNationalCode(
+    @Param(
+      'nationalCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    nationalCode: number,
+  ) {
+    return this.frontScoreService.findScoreByNationalCodeAndAccountNumber(
+      nationalCode.toString(),
+      '',
+    );
+  }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.confirm')

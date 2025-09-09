@@ -21,7 +21,15 @@ export const ScoreApi = {
         credentials: "include",
       }
     );
-
+  },
+  
+  getScoresByNationalCode: async (nationalCode: string) => {
+    return fetchWithAuthClient(
+      `${process.env.NEXT_PUBLIC_API_URL}/front/score/scores/by-national-code/${nationalCode}`,
+      {
+        credentials: "include",
+      }
+    );
   },
 
   createScore: async (scoreData: {

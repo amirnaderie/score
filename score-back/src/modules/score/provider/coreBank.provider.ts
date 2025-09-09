@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -6,6 +6,8 @@ import { LogEvent } from 'src/modules/event/providers/log.event';
 import { logTypes } from 'src/modules/event/enums/logType.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager'; // Add this import
+import { ErrorMessages } from 'src/constants/error-messages.constants';
+import handelError from 'src/utility/handel-error';
 
 @Injectable()
 export class BankCoreProvider {
@@ -13,6 +15,7 @@ export class BankCoreProvider {
   private depositUrl: string;
   private getCustomerDetail: string;
   private apiKey: string;
+  private validDepositTypes: string;
 
   private expiration: string;
   private userName: string;
@@ -35,6 +38,9 @@ export class BankCoreProvider {
     this.password = this.configService.get<string>('BANKCORE_PASSWORD');
     this.expiration = this.configService.get<string>(
       'BANKCORE_SESSIONID_EXPIRATION',
+    );
+    this.validDepositTypes = this.configService.get<string>(
+      'VALID_DEPOSIT_TYPES',
     );
   }
 
@@ -144,21 +150,20 @@ export class BankCoreProvider {
             stack: '',
           }),
         );
-        throw new NotFoundException('مشتری یافت نشد');
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
       }
     } catch (error) {
-      this.eventEmitter.emit(
-        'logEvent',
-        new LogEvent({
-          logTypes: logTypes.ERROR,
-          fileName: 'coreBank.provide.ts',
-          method: 'getCustomerBriefDetail',
-          message: error.message || 'Error in getCustomerBriefDetail',
-          requestBody: JSON.stringify({ nationalCode }),
-          stack: error.stack,
-        }),
+      handelError(
+        error,
+        this.eventEmitter,
+        'coreBank.provide.ts',
+        'getCustomerBriefDetail',
+        { nationalCode },
       );
-      throw error;
     }
   }
 
@@ -196,19 +201,49 @@ export class BankCoreProvider {
         const foundDeposit = response?.data?.result?.depositBeans.find(
           (item) => item.depositNumber === depositNumber[0].toString(),
         );
-        if (!foundDeposit|| foundDeposit.depositType!==1206 ) {
+        if (!foundDeposit || foundDeposit.depositStatus === 'CLOSE') {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
               logTypes: logTypes.ERROR,
               fileName: 'coreBank.provide.ts',
               method: 'getDepositDetail',
-              message: `deposit not found data for cif:${cif} and depositNumber:${depositNumber}`,
+              message: `deposit not found for cif:${cif} and depositNumber:${depositNumber[0]} or it is close, its depositStatus is ${foundDeposit ? foundDeposit.depositStatus : 'invalid'}`,
               requestBody: JSON.stringify({ cif, depositNumber }),
               stack: '',
             }),
           );
-          throw new NotFoundException('حساب یافت نشد');
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+        const validDepositTypes = this.validDepositTypes.split(',');
+        if (
+          validDepositTypes.findIndex(
+            (item) => item.toString() === foundDeposit.depositType.toString(),
+          ) < 0
+        ) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'coreBank.provide.ts',
+              method: 'getDepositDetail',
+              message: `the deposit ${depositNumber[0]} is not valid type, its type is ${foundDeposit.depositType.toString()}`,
+              requestBody: JSON.stringify({
+                cif, depositNumber
+              }),
+              stack: '',
+            }),
+          );
+
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
         }
         return foundDeposit;
       } else {
@@ -223,21 +258,33 @@ export class BankCoreProvider {
             stack: '',
           }),
         );
-        throw new NotFoundException('مشتری یافت نشد');
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
       }
     } catch (error) {
-      this.eventEmitter.emit(
-        'logEvent',
-        new LogEvent({
-          logTypes: logTypes.ERROR,
-          fileName: 'coreBank.provide.ts',
-          method: 'getDepositDetail',
-          message: error.message || 'Error in getDepositDetail',
-          requestBody: JSON.stringify({ cif, depositNumber }),
-          stack: error.stack,
-        }),
+      handelError(
+        error,
+        this.eventEmitter,
+        'coreBank.provide.ts',
+        'getDepositDetail',
+        { cif, depositNumber },
       );
-      throw error;
+
+      // this.eventEmitter.emit(
+      //   'logEvent',
+      //   new LogEvent({
+      //     logTypes: logTypes.ERROR,
+      //     fileName: 'coreBank.provide.ts',
+      //     method: 'getDepositDetail',
+      //     message: error.message || 'Error in getDepositDetail',
+      //     requestBody: JSON.stringify({ cif, depositNumber }),
+      //     stack: error.stack,
+      //   }),
+      // );
+      // throw new BadRequestException(ErrorMessages.COREBANKING_ERROR);
     }
   }
 }

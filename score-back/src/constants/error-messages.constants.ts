@@ -17,4 +17,5 @@ export const ErrorMessages = {
   OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است',
   FORBIDDEN: 'عدم مجوز دسترسی',
   USER_NOT_FOUND: 'اطلاعات کاربر در سامانه افرا یافت نشد',
+  COREBANKING_ERROR: 'خطا در اتصال به کر بانکینگ',
 };

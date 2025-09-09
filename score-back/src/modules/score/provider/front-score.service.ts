@@ -488,42 +488,14 @@ export class FrontScoreService {
     try {
       const { nationalCode, accountNumber, score, updatedAt } = createScoreDto;
 
-      try {
-        const scoreOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
-        const { depositStatus: depositStatus } =
-          await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
-            accountNumber,
-          ]);
-        if (depositStatus === 'CLOSE') {
-          this.eventEmitter.emit(
-            'logEvent',
-            new LogEvent({
-              logTypes: logTypes.INFO,
-              fileName: 'front-score.service',
-              method: 'createScore',
-              message: `The Account:${accountNumber} is not open`,
-              requestBody: JSON.stringify({
-                nationalCode,
-                accountNumber,
-                score,
-              }),
-              stack: '',
-            }),
-          );
-          throw new BadRequestException({
-            message: ErrorMessages.NOTACTIVE,
-            statusCode: HttpStatus.BAD_REQUEST,
-            error: 'Bad Request',
-          });
-        }
-      } catch (error) {
-        throw new BadRequestException({
-          message: ErrorMessages.NOTACTIVE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
+
+      const scoreOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+      await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
+        accountNumber,
+      ]);
+
+
 
       const newScore = this.scoreRepository.create({
 
@@ -570,42 +542,12 @@ export class FrontScoreService {
         where: { id },
       });
       const { nationalCode, accountNumber } = score
-      try {
-        const scoreOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
-        const { depositStatus: depositStatus } =
-          await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
-            accountNumber,
-          ]);
-        if (depositStatus === 'CLOSE') {
-          this.eventEmitter.emit(
-            'logEvent',
-            new LogEvent({
-              logTypes: logTypes.INFO,
-              fileName: 'front-score.service',
-              method: 'createScore',
-              message: `The Account:${accountNumber} is not open`,
-              requestBody: JSON.stringify({
-                nationalCode,
-                accountNumber,
-                score,
-              }),
-              stack: '',
-            }),
-          );
-          throw new BadRequestException({
-            message: ErrorMessages.NOTACTIVE,
-            statusCode: HttpStatus.BAD_REQUEST,
-            error: 'Bad Request',
-          });
-        }
-      } catch (error) {
-        throw new BadRequestException({
-          message: ErrorMessages.NOTACTIVE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
+
+      const scoreOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+      await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
+        accountNumber,
+      ]);
 
       if (!score) {
         this.eventEmitter.emit(

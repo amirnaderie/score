@@ -58,9 +58,9 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-2 rounded-lg shadow-md h-30 mb-2"
+      className="bg-white p-2   mb-2"
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full items-center">
+      <div className="grid grid-cols-1 md:grid-cols-3 h-30 gap-4 rounded-lg shadow-md  items-center p-2">
         <div className="h-full">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             کد/شناسه ملی

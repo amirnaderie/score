@@ -9,6 +9,7 @@ import {
   handleInput,
   validateIranianNationalCode,
 } from "@/app/lib/utility";
+import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 
 export default function SupportPage() {
   const [nationalCode, setNationalCode] = useState("");
@@ -221,7 +222,7 @@ export default function SupportPage() {
   return (
     <div className="h-full flex flex-col gap-y-2">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 items-end h-24 bg-white py-2 px-4 rounded-lg shadow-md">
-        <div >
+        <div>
           <label
             htmlFor="nationalCode"
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -242,6 +243,11 @@ export default function SupportPage() {
             onChange={(e) => {
               setNationalCode(e.target.value);
               validateNationalCode(e.target.value);
+              // Hide form section when user starts typing
+              setIsEditing(false);
+              setShowScoresList(false);
+              setScores([]);
+              setSelectedScore(null);
             }}
             placeholder="کد/شناسه ملی را وارد نمایید"
             maxLength={11}
@@ -251,7 +257,7 @@ export default function SupportPage() {
           )}
         </div>
 
-        <div >
+        <div>
           <label
             htmlFor="accountNumber"
             className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -271,7 +277,14 @@ export default function SupportPage() {
               `}
             value={accountNumber}
             maxLength={14}
-            onChange={(e) => setAccountNumber(e.target.value)}
+            onChange={(e) => {
+              setAccountNumber(e.target.value);
+              // Hide form section when user starts typing
+              setIsEditing(false);
+              setShowScoresList(false);
+              setScores([]);
+              setSelectedScore(null);
+            }}
             placeholder="شماره حساب را وارد نمایید"
             required
           />
@@ -279,7 +292,7 @@ export default function SupportPage() {
             <p className="text-red-500 text-xs mt-1">{accountNumberError}</p>
           )}
         </div>
-        <div >
+        <div>
           <button
             onClick={handleSearch}
             disabled={
@@ -291,11 +304,15 @@ export default function SupportPage() {
             }
             className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {loading ? "در حال جستجو..." : "جستجو"}
+            {loading ? (
+              <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+            ) : (
+              "جستجو"
+            )}
           </button>
         </div>
       </div>
-
+      ``
       {showScoresList && scores.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -369,12 +386,7 @@ export default function SupportPage() {
           </div>
         </div>
       )}
-
-      {(isEditing ||
-        (!isEditing &&
-          nationalCode &&
-          accountNumber &&
-          (!showScoresList || scores.length === 0))) && (
+      {isEditing && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             {isEditing ? "ویرایش امتیاز" : "ایجاد امتیاز جدید"}

@@ -17,7 +17,6 @@ export default function TransferPage() {
     toNationalCode: "",
     toAccountNumber: "",
     score: 0,
-    referenceCode: "",
     description: "",
   });
 
@@ -27,7 +26,6 @@ export default function TransferPage() {
     toNationalCode?: string;
     toAccountNumber?: string;
     score?: string;
-    referenceCode?: string;
   }>({});
 
   const [estelamData, setEstelamData] = useState<EstelamResponse | null>(null);
@@ -72,12 +70,6 @@ export default function TransferPage() {
       case "score":
         if (!value || Number(value) <= 0) {
           error = "مقدار امتیاز باید بیشتر از صفر باشد";
-        }
-        break;
-
-      case "referenceCode":
-        if (value && value.toString().length > 60) {
-          error = "کد مرجع نمی‌تواند بیشتر از 60 کاراکتر باشد";
         }
         break;
     }
@@ -177,7 +169,6 @@ export default function TransferPage() {
           toNationalCode: "",
           toAccountNumber: "",
           score: 0,
-          referenceCode: "",
           description: "",
         });
         setErrors({});
@@ -388,27 +379,12 @@ export default function TransferPage() {
                           ...prev,
                           description: e.target.value,
                         }));
-                        if (errors.referenceCode) {
-                          setErrors((prev) => ({
-                            ...prev,
-                            referenceCode: undefined,
-                          }));
-                        }
                       }}
                       onBlur={handleBlur}
-                      className={` ${
-                        errors.referenceCode
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      className={` border-gray-300 dark:border-gray-600 w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="توضیح"
                       maxLength={50}
                     />
-                    {errors.referenceCode && (
-                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                        {errors.referenceCode}
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -462,7 +438,11 @@ export default function TransferPage() {
                   disabled={saveLoading}
                   className="bg-green-600 flex min-w-28 justify-center hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-2 px-6 rounded-md transition duration-200"
                 >
-                  {saveLoading ?  <SpinnerSVG className="h-5 w-5 animate-spin text-white" /> : "ثبت انتقال"}
+                  {saveLoading ? (
+                    <SpinnerSVG className="h-5 w-5 animate-spin text-white" />
+                  ) : (
+                    "ثبت انتقال"
+                  )}
                 </button>
                 <button
                   onClick={() => {

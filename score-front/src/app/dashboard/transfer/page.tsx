@@ -1,107 +1,218 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { toast } from 'react-toastify';
-import { transferApi, TransferRequest, EstelamResponse } from './api/apis';
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { transferApi, TransferRequest, EstelamResponse } from "./api/apis";
+import {
+  formatNumber,
+  handleInput,
+  validateIranianNationalCode,
+} from "@/app/lib/utility";
+import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 
 export default function TransferPage() {
   const [formData, setFormData] = useState<TransferRequest>({
-    fromNationalCode: '',
-    fromAccountNumber: '',
-    toNationalCode: '',
-    toAccountNumber: '',
+    fromNationalCode: "",
+    fromAccountNumber: "",
+    toNationalCode: "",
+    toAccountNumber: "",
     score: 0,
-    referenceCode: '',
-    description: '',
+    referenceCode: "",
+    description: "",
   });
+
+  const [errors, setErrors] = useState<{
+    fromNationalCode?: string;
+    fromAccountNumber?: string;
+    toNationalCode?: string;
+    toAccountNumber?: string;
+    score?: string;
+    referenceCode?: string;
+  }>({});
 
   const [estelamData, setEstelamData] = useState<EstelamResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [showEstelam, setShowEstelam] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(true);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'score' ? Number(value) : value
+      [name]: value,
     }));
+
+    // Clear error when user starts typing
+    if (errors[name as keyof typeof errors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const validateField = (name: string, value: string | number) => {
+    let error = "";
+
+    switch (name) {
+      case "fromNationalCode":
+      case "toNationalCode":
+        if (!value) {
+          error = "کد ملی الزامی است";
+        } else if (!validateIranianNationalCode(Number(value.toString()))) {
+          error = "کد ملی معتبر نیست";
+        }
+        break;
+
+      case "fromAccountNumber":
+      case "toAccountNumber":
+        if (!value) {
+          error = "شماره حساب الزامی است";
+        }
+        break;
+
+      case "score":
+        if (!value || Number(value) <= 0) {
+          error = "مقدار امتیاز باید بیشتر از صفر باشد";
+        }
+        break;
+
+      case "referenceCode":
+        if (value && value.toString().length > 60) {
+          error = "کد مرجع نمی‌تواند بیشتر از 60 کاراکتر باشد";
+        }
+        break;
+    }
+
+    return error;
+  };
+
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+
+    Object.keys(formData).forEach((key) => {
+      const error = validateField(key, formData[key as keyof TransferRequest]);
+      if (error) {
+        newErrors[key as keyof typeof errors] = error;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const error = validateField(name, value);
+    if (error) {
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   const handleEstelam = async () => {
-    if (!formData.fromNationalCode || !formData.fromAccountNumber || 
-        !formData.toNationalCode || !formData.toAccountNumber || !formData.score) {
-      toast.error('لطفاً تمام فیلدهای مورد نیاز را پر کنید');
+    // if (
+    //   !formData.fromNationalCode ||
+    //   !formData.fromAccountNumber ||
+    //   !formData.toNationalCode ||
+    //   !formData.toAccountNumber
+    // ) {
+    //   toast.error("لطفاً کد ملی و شماره حساب طرفین را وارد کنید");
+    //   return;
+    // }
+
+    if (!validateForm()) {
+      toast.error("لطفاً خطاهای فرم را برطرف نمایید");
+      return;
+    }
+    if (
+      formData.fromNationalCode === formData.toNationalCode &&
+      formData.fromAccountNumber === formData.toAccountNumber
+    ) {
+      toast.error("امکان انتقال برای این مشخصات وجود ندارد");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await transferApi.estelamTransfer(formData);
+      const estelamData = {
+        fromNationalCode: formData.fromNationalCode,
+        fromAccountNumber: formData.fromAccountNumber,
+        toNationalCode: formData.toNationalCode,
+        toAccountNumber: formData.toAccountNumber,
+      };
+
+      const response = await transferApi.estelamTransfer(estelamData);
+      const data = await response.json();
       if (response.status === 200) {
-        const data = await response.json();
+        //const data = await response.json();
         setEstelamData(data.data);
         setShowEstelam(true);
-        toast.success('اطلاعات استعلام دریافت شد');
+        toast.success("اطلاعات استعلام دریافت شد");
       } else {
-        toast.error('خطا در استعلام اطلاعات');
+        toast.error(data.message);
       }
     } catch (error) {
-      toast.error('خطا در برقراری ارتباط با سرور');
+      toast.error("خطا در برقراری ارتباط با سرور");
     } finally {
       setLoading(false);
     }
   };
 
   const handleTransfer = async () => {
-    setLoading(true);
+    if (!validateForm()) {
+      toast.error("لطفاً خطاهای فرم را برطرف نمایید");
+      return;
+    }
+
+    setSaveLoading(true);
     try {
-      const response = await transferApi.transferScore(formData);
+      const response = await transferApi.transferScore({
+        ...formData,
+        score: Number(formData.score.toString().replaceAll(",", "")),
+      });
       if (response.status === 200) {
-        toast.success('انتقال امتیاز با موفقیت انجام شد');
+        toast.success("انتقال امتیاز با موفقیت انجام شد");
         // Reset form
         setFormData({
-          fromNationalCode: '',
-          fromAccountNumber: '',
-          toNationalCode: '',
-          toAccountNumber: '',
+          fromNationalCode: "",
+          fromAccountNumber: "",
+          toNationalCode: "",
+          toAccountNumber: "",
           score: 0,
-          referenceCode: '',
-          description: '',
+          referenceCode: "",
+          description: "",
         });
+        setErrors({});
         setEstelamData(null);
         setShowEstelam(false);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || 'خطا در انتقال امتیاز');
+        toast.error(errorData.message || "خطا در انتقال امتیاز");
       }
     } catch (error) {
-      toast.error('خطا در برقراری ارتباط با سرور');
+      toast.error("خطا در برقراری ارتباط با سرور");
     } finally {
-      setLoading(false);
+      setSaveLoading(false);
     }
   };
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>, maxLength: number) => {
-    const value = e.target.value.replace(/[^\d]/g, '');
-    if (value.length <= maxLength) {
-      handleInputChange({
-        target: {
-          name: e.target.name,
-          value: value
-        }
-      } as React.ChangeEvent<HTMLInputElement>);
-    }
-  };
+  // const handleInput = (
+  //   e: React.ChangeEvent<HTMLInputElement>,
+  //   maxLength: number
+  // ) => {
+  //   const value = e.target.value.replace(/[^\d]/g, "");
+  //   if (value.length <= maxLength) {
+  //     handleInputChange({
+  //       target: {
+  //         name: e.target.name,
+  //         value: value,
+  //       },
+  //     } as React.ChangeEvent<HTMLInputElement>);
+  //   }
+  // };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="bg-gray-50 dark:bg-gray-900 py-4">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            انتقال امتیاز
-          </h1>
-
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-3">
           {showTransferForm && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -111,17 +222,28 @@ export default function TransferPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      کد ملی مبدا
+                      کد/شناسه ملی مبدا
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       name="fromNationalCode"
                       value={formData.fromNationalCode}
-                      onChange={(e) => handleInput(e, 11)}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="کد ملی مبدا را وارد کنید"
+                      onInput={(e) => handleInput(e, 11)}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={` ${
+                        errors.fromNationalCode
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      placeholder="کد/شناسه مبدا را وارد کنید"
                       maxLength={11}
                     />
+                    {errors.fromNationalCode && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.fromNationalCode}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -129,14 +251,25 @@ export default function TransferPage() {
                       شماره حساب مبدا
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       name="fromAccountNumber"
                       value={formData.fromAccountNumber}
-                      onChange={(e) => handleInput(e, 16)}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onInput={(e) => handleInput(e, 16)}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={` ${
+                        errors.fromAccountNumber
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="شماره حساب مبدا را وارد کنید"
                       maxLength={16}
                     />
+                    {errors.fromAccountNumber && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.fromAccountNumber}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -148,17 +281,28 @@ export default function TransferPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      کد ملی مقصد
+                      کد/شناسه ملی مقصد
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       name="toNationalCode"
                       value={formData.toNationalCode}
-                      onChange={(e) => handleInput(e, 11)}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="کد ملی مقصد را وارد کنید"
+                      onInput={(e) => handleInput(e, 11)}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={` ${
+                        errors.toNationalCode
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      placeholder="کد/شناسه مقصد را وارد کنید"
                       maxLength={11}
                     />
+                    {errors.toNationalCode && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.toNationalCode}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -166,14 +310,25 @@ export default function TransferPage() {
                       شماره حساب مقصد
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       name="toAccountNumber"
                       value={formData.toAccountNumber}
-                      onChange={(e) => handleInput(e, 16)}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onInput={(e) => handleInput(e, 16)}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={` ${
+                        errors.toAccountNumber
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="شماره حساب مقصد را وارد کنید"
                       maxLength={16}
                     />
+                    {errors.toAccountNumber && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.toAccountNumber}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -185,52 +340,95 @@ export default function TransferPage() {
                       مقدار امتیاز
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      id="score"
                       name="score"
-                      value={formData.score || ''}
+                      inputMode="numeric"
+                      className="w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right"
+                      value={
+                        formData.score &&
+                        formatNumber(formData.score.toString())
+                      }
                       onChange={handleInputChange}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="مقدار امتیاز را وارد کنید"
-                      min="1"
+                      placeholder="مقدار امتیاز را وارد نمایید"
+                      onInput={(e) => handleInput(e, 17)}
                     />
+                    {/* <input
+                      type="text"
+                      name="score"
+                      inputMode="numeric"
+                      value={formatNumber(formData.score.toString())}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      onInput={(e) => handleInput(e, 15)}
+                      className={`${
+                        errors.score
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      placeholder="مقدار امتیاز را وارد کنید"
+                      // min="1"
+                    /> */}
+                    {errors.score && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.score}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      کد مرجع (اختیاری)
+                      توضیحات (اختیاری)
                     </label>
                     <input
-                      type="text"
-                      name="referenceCode"
-                      value={formData.referenceCode}
-                      onChange={(e) => handleInput(e, 20)}
-                      className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="کد مرجع"
+                      name="description"
+                      value={formData.description}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }));
+                        if (errors.referenceCode) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            referenceCode: undefined,
+                          }));
+                        }
+                      }}
+                      onBlur={handleBlur}
+                      className={` ${
+                        errors.referenceCode
+                          ? "border-red-500"
+                          : "border-gray-300 dark:border-gray-600"
+                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      placeholder="توضیح"
+                      maxLength={50}
                     />
+                    {errors.referenceCode && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {errors.referenceCode}
+                      </p>
+                    )}
                   </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    توضیحات (اختیاری)
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="توضیحات انتقال"
-                  />
                 </div>
 
                 <div className="mt-6">
                   <button
                     onClick={handleEstelam}
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 px-6 rounded-md transition duration-200"
+                    disabled={
+                      loading ||
+                      !formData.fromNationalCode ||
+                      !formData.fromAccountNumber ||
+                      !formData.toNationalCode ||
+                      !formData.toAccountNumber
+                    }
+                    className="w-full flex text-sm justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 px-6 rounded-md transition duration-200"
                   >
-                    {loading ? 'در حال استعلام...' : 'استعلام نام طرفین'}
+                    {loading ? (
+                      <SpinnerSVG className="h-5 w-5 animate-spin text-white" />
+                    ) : (
+                      "استعلام"
+                    )}
                   </button>
                 </div>
               </div>
@@ -239,34 +437,39 @@ export default function TransferPage() {
 
           {showEstelam && estelamData && (
             <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4">
-                نتیجه استعلام
-              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">نام مبدا:</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{estelamData.fromName}</p>
+                <div className="flex gap-x-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    نام دارنده حساب مبدا:
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {estelamData.fromName}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">نام مقصد:</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{estelamData.toName}</p>
+                <div className="flex gap-x-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    نام دارنده حساب مقصد:
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {estelamData.toName}
+                  </p>
                 </div>
               </div>
-              
-              <div className="mt-6 flex gap-4">
+
+              <div className="mt-6 flex gap-4 text-sm">
                 <button
                   onClick={handleTransfer}
-                  disabled={loading}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-3 px-6 rounded-md transition duration-200"
+                  disabled={saveLoading}
+                  className="bg-green-600 flex min-w-28 justify-center hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-2 px-6 rounded-md transition duration-200"
                 >
-                  {loading ? 'در حال انتقال...' : 'ثبت انتقال'}
+                  {saveLoading ?  <SpinnerSVG className="h-5 w-5 animate-spin text-white" /> : "ثبت انتقال"}
                 </button>
                 <button
                   onClick={() => {
                     setShowEstelam(false);
                     setEstelamData(null);
                   }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md transition duration-200"
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-md transition duration-200"
                 >
                   بازگشت
                 </button>

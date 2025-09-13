@@ -61,7 +61,7 @@ export const transferApi = {
     return res;
   },
 
-  estelamTransfer: async (data: TransferRequest) => {
+  estelamTransfer: async (data: { fromNationalCode: string; fromAccountNumber: string; toNationalCode: string; toAccountNumber: string }) => {
     const res = await fetchWithAuthClient(
       `${process.env.NEXT_PUBLIC_API_URL}/front/score/estelam-transfer`,
       {

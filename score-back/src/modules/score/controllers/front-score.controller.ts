@@ -78,7 +78,7 @@ export class FrontScoreController {
   @Roles('score.confirm')
   @Post('transfer')
   @HttpCode(200)
-  transferScore(@Body() transferScoreDto: TransferScoreDto, @Req() req) {
+  transferScore(@Body() transferScoreDto: Partial<TransferScoreDto>, @Req() req, @GetUser() user: User) {
     const fromNationalCode = Number(transferScoreDto.fromNationalCode);
     const toNationalCode = Number(transferScoreDto.toNationalCode);
     const fromAccountNumber = Number(transferScoreDto.fromAccountNumber);
@@ -93,31 +93,27 @@ export class FrontScoreController {
       score,
       ip,
       transferScoreDto.referenceCode ?? null,
-      transferScoreDto.description
+      transferScoreDto.description,
+      user
     );
   }
-  
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.confirm')
   @Post('estelam-transfer')
   @HttpCode(200)
-  estelamTransferScore(@Body() transferScoreDto: TransferScoreDto, @Req() req) {
+  estelamTransferScore(@Body() transferScoreDto: Partial<TransferScoreDto>, @Req() req) {
     const fromNationalCode = Number(transferScoreDto.fromNationalCode);
     const toNationalCode = Number(transferScoreDto.toNationalCode);
     const fromAccountNumber = Number(transferScoreDto.fromAccountNumber);
     const toAccountNumber = Number(transferScoreDto.toAccountNumber);
     const score = transferScoreDto.score;
     const ip = req.ip || req.connection.remoteAddress;
-    return this.frontScoreService.transferScore(
+    return this.frontScoreService.estelamTransferScore(
       fromNationalCode,
       toNationalCode,
       fromAccountNumber,
-      toAccountNumber,
-      score,
-      ip,
-      transferScoreDto.referenceCode ?? null,
-      transferScoreDto.description
-    );
+      toAccountNumber);
   }
 
   @UseGuards(AuthGuard, RolesGuard)

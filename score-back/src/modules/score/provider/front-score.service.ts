@@ -197,6 +197,7 @@ export class FrontScoreService {
     ip: string,
     referenceCode: number | null,
     description: string,
+    user: User,
   ) {
     try {
 
@@ -261,8 +262,8 @@ export class FrontScoreService {
         fromAccountNumber,
         toAccountNumber,
         score,
-        0,
-        referenceCode,
+        Number(user.userName),
+        null,
         description,
       );
 

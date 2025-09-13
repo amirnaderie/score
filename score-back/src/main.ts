@@ -14,7 +14,7 @@ async function bootstrap() {
   const corsOptions = {
     origin: (origin, callback) => {
       const allowedOrigins = CORS_ORIGINS
-        ? CORS_ORIGINS.split(',').map(origin => origin.trim())
+        ? CORS_ORIGINS.split(',').map((origin) => origin.trim())
         : [];
 
       if (!origin) {
@@ -22,17 +22,30 @@ async function bootstrap() {
         return;
       }
 
-      if (allowedOrigins.includes(origin)) {
+      if (allowedOrigins.includes(origin) || !origin) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
   };
   app.enableCors(corsOptions);
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -43,7 +56,9 @@ async function bootstrap() {
       exceptionFactory: (errors) => {
         const firstError = errors[0];
         const constraints = firstError?.constraints;
-        const message = constraints ? Object.values(constraints)[0] : 'Validation failed';
+        const message = constraints
+          ? Object.values(constraints)[0]
+          : 'Validation failed';
         return new BadRequestException(message);
       },
     }),

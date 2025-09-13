@@ -10,6 +10,7 @@ import {
   validateIranianNationalCode,
 } from "@/app/lib/utility";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
+import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 
 export default function SupportPage() {
   const [nationalCode, setNationalCode] = useState("");

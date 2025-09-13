@@ -9,6 +9,7 @@ import {
   handleInput,
   validateIranianNationalCode,
 } from "@/app/lib/utility";
+import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 
 export default function SupportPage() {
   const [nationalCode, setNationalCode] = useState("");
@@ -17,6 +18,7 @@ export default function SupportPage() {
   const [updatedAt, setUpdatedAt] = useState("");
   const [scoreId, setScoreId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
   const [scores, setScores] = useState<any[]>([]);
   const [selectedScore, setSelectedScore] = useState<any | null>(null);
@@ -74,6 +76,7 @@ export default function SupportPage() {
           setScores(data);
           setShowScoresList(true);
           setIsEditing(false);
+          setIsAdding(false);
           setScoreId(null);
           setScore("");
           setUpdatedAt("");
@@ -90,6 +93,7 @@ export default function SupportPage() {
             .replace(/\//g, "/");
           setUpdatedAt(persianDate);
           setIsEditing(true);
+          setIsAdding(false);
           setSelectedScore(data);
           setScores([data]);
           setShowScoresList(true);
@@ -99,6 +103,7 @@ export default function SupportPage() {
           setScore("");
           setUpdatedAt("");
           setIsEditing(false);
+          setIsAdding(true);
           setSelectedScore(null);
           setScores([]);
           setShowScoresList(false);
@@ -109,6 +114,7 @@ export default function SupportPage() {
         setScore("");
         setUpdatedAt("");
         setIsEditing(false);
+        setIsAdding(true);
         setSelectedScore(null);
         setScores([]);
         setShowScoresList(false);
@@ -169,7 +175,7 @@ export default function SupportPage() {
           const errorData = await response.json();
           toast.error(errorData.message || "خطا در بروزرسانی امتیاز.");
         }
-      } else {
+      } else if (isAdding) {
         // Create new score
         const response = await ScoreApi.createScore({
           nationalCode,
@@ -192,6 +198,7 @@ export default function SupportPage() {
           setScores([...scores, newScore]);
           setSelectedScore(null);
           setIsEditing(false);
+          setIsAdding(false);
           setShowScoresList(true);
         } else {
           const errorData = await response.json();
@@ -243,6 +250,11 @@ export default function SupportPage() {
               onChange={(e) => {
                 setNationalCode(e.target.value);
                 validateNationalCode(e.target.value);
+                setIsEditing(false);
+                setIsAdding(false);
+                setShowScoresList(false);
+                setScores([]);
+                setSelectedScore(null);
               }}
               placeholder="کد/شناسه ملی را وارد نمایید"
               maxLength={11}
@@ -272,7 +284,15 @@ export default function SupportPage() {
               `}
               value={accountNumber}
               maxLength={14}
-              onChange={(e) => setAccountNumber(e.target.value)}
+              onChange={(e) => {
+                setAccountNumber(e.target.value);
+                setIsEditing(false);
+                setIsAdding(false);
+                setShowScoresList(false);
+                setShowScoresList(false);
+                setScores([]);
+                setSelectedScore(null);
+              }}
               placeholder="شماره حساب را وارد نمایید"
               required
             />
@@ -290,9 +310,13 @@ export default function SupportPage() {
                 !!nationalCodeError ||
                 !!accountNumberError
               }
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full flex justify-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? "در حال جستجو..." : "جستجو"}
+              {loading ? (
+                <SpinnerSVG className="h-4 w-4 animate-spin text-white" />
+              ) : (
+                "جستجو"
+              )}
             </button>
           </div>
         </div>
@@ -371,11 +395,7 @@ export default function SupportPage() {
           </div>
         )}
 
-        {(isEditing ||
-          (!isEditing &&
-            nationalCode &&
-            accountNumber &&
-            (!showScoresList || scores.length === 0))) && (
+        {(isEditing || isAdding) && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
               {isEditing ? "ویرایش امتیاز" : "ایجاد امتیاز جدید"}
@@ -435,7 +455,7 @@ export default function SupportPage() {
                     setUpdatedAt(formatted);
                   }}
                   maxLength={10}
-                  placeholder="مثال: 14020115"
+                  placeholder="مثال: 14040615"
                 />
               </div>
             </div>
@@ -457,6 +477,7 @@ export default function SupportPage() {
                   setScore("");
                   setUpdatedAt("");
                   setIsEditing(false);
+                  setIsAdding(false);
                   setScoreId(null);
                   setSelectedScore(null);
                   // If we have scores listed, show them again

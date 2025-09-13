@@ -12,6 +12,7 @@ import {
   Delete,
   Query,
   Patch,
+  Req,
 } from '@nestjs/common';
 
 import { Roles } from 'src/decorators/roles.decorator';
@@ -26,6 +27,7 @@ import { PaginatedTransferDto } from '../dto/paginated-transfer.dto';
 import { GetScoreDto } from '../dto/get-score.dto';
 import { CreateScoreDto } from '../dto/create-score.dto';
 import { UpdateScoreDto } from '../dto/update-score.dto';
+import { TransferScoreDto } from '../dto/transfer-score.dto';
 
 @Controller('front/score')
 export class FrontScoreController {
@@ -43,7 +45,7 @@ export class FrontScoreController {
       accountNumber,
     );
   }
-  
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.view', 'score.confirm', 'score.branch')
   @Get('scores/by-national-code/:nationalCode')
@@ -69,6 +71,53 @@ export class FrontScoreController {
   @HttpCode(200)
   async createScore(@Body() createScoreDto: CreateScoreDto, @GetUser() user: User) {
     return this.frontScoreService.createScore(createScoreDto, user);
+  }
+
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm')
+  @Post('transfer')
+  @HttpCode(200)
+  transferScore(@Body() transferScoreDto: TransferScoreDto, @Req() req) {
+    const fromNationalCode = Number(transferScoreDto.fromNationalCode);
+    const toNationalCode = Number(transferScoreDto.toNationalCode);
+    const fromAccountNumber = Number(transferScoreDto.fromAccountNumber);
+    const toAccountNumber = Number(transferScoreDto.toAccountNumber);
+    const score = transferScoreDto.score;
+    const ip = req.ip || req.connection.remoteAddress;
+    return this.frontScoreService.transferScore(
+      fromNationalCode,
+      toNationalCode,
+      fromAccountNumber,
+      toAccountNumber,
+      score,
+      ip,
+      transferScoreDto.referenceCode ?? null,
+      transferScoreDto.description
+    );
+  }
+  
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm')
+  @Post('estelam-transfer')
+  @HttpCode(200)
+  estelamTransferScore(@Body() transferScoreDto: TransferScoreDto, @Req() req) {
+    const fromNationalCode = Number(transferScoreDto.fromNationalCode);
+    const toNationalCode = Number(transferScoreDto.toNationalCode);
+    const fromAccountNumber = Number(transferScoreDto.fromAccountNumber);
+    const toAccountNumber = Number(transferScoreDto.toAccountNumber);
+    const score = transferScoreDto.score;
+    const ip = req.ip || req.connection.remoteAddress;
+    return this.frontScoreService.transferScore(
+      fromNationalCode,
+      toNationalCode,
+      fromAccountNumber,
+      toAccountNumber,
+      score,
+      ip,
+      transferScoreDto.referenceCode ?? null,
+      transferScoreDto.description
+    );
   }
 
   @UseGuards(AuthGuard, RolesGuard)

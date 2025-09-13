@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpStatus, BadRequestException, ConflictException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -146,6 +146,133 @@ export class FrontScoreService {
         'findByNationalCodeForFront',
         { nationalCode: nationalCode },
       );
+    }
+  }
+
+  public async estelamTransferScore(fromNationalCode: number,
+    toNationalCode: number,
+    fromAccountNumber: number,
+    toAccountNumber: number) {
+    try {
+      if (
+        fromNationalCode === toNationalCode &&
+        fromAccountNumber === toAccountNumber
+      ) {
+        throw new BadRequestException({
+          message: ErrorMessages.VALIDATE_INFO_FAILED,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      const scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+        fromAccountNumber,
+      ]);
+
+
+      const scoreToOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+        toAccountNumber,
+      ]);
+
+      return { message: ErrorMessages.SUCCESSFULL, statusCode: 200, data: { fromName: scoreFromOwner.name || "", toName: scoreToOwner.name || "" } };
+    } catch (error) {
+      handelError(error, this.eventEmitter, 'front-score.service', 'estelamTransferScore', {
+        fromNationalCode,
+        toNationalCode,
+
+      });
+    }
+  }
+
+  public async transferScore(
+    fromNationalCode: number,
+    toNationalCode: number,
+    fromAccountNumber: number,
+    toAccountNumber: number,
+    score: number,
+    ip: string,
+    referenceCode: number | null,
+    description: string,
+  ) {
+    try {
+
+      if (
+        fromNationalCode === toNationalCode &&
+        fromAccountNumber === toAccountNumber
+      ) {
+        throw new BadRequestException({
+          message: ErrorMessages.VALIDATE_INFO_FAILED,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      const scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+        fromAccountNumber,
+      ]);
+
+      if (toNationalCode.toString().length < 11) {
+        const scoreToOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+          toAccountNumber,
+        ]);
+
+      }
+      if (referenceCode) {
+        const foundReferenceCode = await this.transferScoreRepository.findOne({
+          where: {
+            referenceCode,
+          },
+        });
+        if (foundReferenceCode) {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.INFO,
+              fileName: 'front-score.service',
+              method: 'transferScore',
+              message: `this referenceCode:${referenceCode} is duplicate`,
+              requestBody: JSON.stringify({
+                fromAccountNumber,
+                toAccountNumber,
+              }),
+              stack: '',
+            }),
+          );
+
+          throw new ConflictException({
+            message: ErrorMessages.REPETITIVE_INFO_FAILED,
+            statusCode: HttpStatus.CONFLICT,
+            error: 'Conflict',
+          });
+        }
+      }
+
+      return this.sharedProvider.transferScore(
+        fromNationalCode,
+        toNationalCode,
+        fromAccountNumber,
+        toAccountNumber,
+        score,
+        0,
+        referenceCode,
+        description,
+      );
+
+      // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
+    } catch (error) {
+      handelError(error, this.eventEmitter, 'front-score.service', 'transferScore', {
+        fromNationalCode,
+        toNationalCode,
+        score,
+      });
     }
   }
 
@@ -534,9 +661,6 @@ export class FrontScoreService {
       await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
         accountNumber,
       ]);
-
-
-
       const newScore = this.scoreRepository.create({
 
         nationalCode: Number(nationalCode),

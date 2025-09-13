@@ -31,6 +31,21 @@ export interface TransferSearchParams {
   sortOrder?: 'ASC' | 'DESC';
 }
 
+export interface TransferRequest {
+  fromNationalCode: string;
+  fromAccountNumber: string;
+  toNationalCode: string;
+  toAccountNumber: string;
+  score: number;
+  referenceCode?: string;
+  description?: string;
+}
+
+export interface EstelamResponse {
+  fromName: string;
+  toName: string;
+}
+
 export const transferApi = {
   getAllTransfers: async (params: TransferSearchParams) => {
     const queryString = new URLSearchParams(Object.fromEntries(
@@ -41,6 +56,36 @@ export const transferApi = {
       `${process.env.NEXT_PUBLIC_API_URL}/front/score/transfers/all?${queryString}`,
       {
         credentials: "include",
+      }
+    );
+    return res;
+  },
+
+  estelamTransfer: async (data: TransferRequest) => {
+    const res = await fetchWithAuthClient(
+      `${process.env.NEXT_PUBLIC_API_URL}/front/score/estelam-transfer`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      }
+    );
+    return res;
+  },
+
+  transferScore: async (data: TransferRequest) => {
+    const res = await fetchWithAuthClient(
+      `${process.env.NEXT_PUBLIC_API_URL}/front/score/transfer`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
       }
     );
     return res;

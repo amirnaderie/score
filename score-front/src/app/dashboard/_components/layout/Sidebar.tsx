@@ -65,6 +65,12 @@ const Sidebar: FC<Props> = (props) => {
           isOpen: false,
           roles: ["score.confirm"],
         },
+        {
+          label: "انتقال امتیاز",
+          key: "transfer",
+          isOpen: false,
+          roles: ["score.confirm"],
+        },
       ],
     },
     {
@@ -74,7 +80,7 @@ const Sidebar: FC<Props> = (props) => {
       children: [
         {
           label: "انتقال ها",
-          key: "transfer",
+          key: "transfer/report",
           isOpen: false,
           ...MENU_ROLES.score,
         },

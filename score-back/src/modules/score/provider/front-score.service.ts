@@ -662,6 +662,7 @@ export class FrontScoreService {
       await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
         accountNumber,
       ]);
+
       const newScore = this.scoreRepository.create({
 
         nationalCode: Number(nationalCode),

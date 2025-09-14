@@ -34,7 +34,7 @@ export class FrontScoreController {
   constructor(private readonly frontScoreService: FrontScoreService) { }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm')
+  @Roles('score.confirm', 'score.branch')
   @Get('scores')
   async getScore(
     @Query() getScoreDto: GetScoreDto,

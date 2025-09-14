@@ -47,7 +47,7 @@ export default function TransferPage() {
     }
   };
 
-  const validateField = (name: string, value: string | number) => {
+  const validateField = (name: string, value: string | number | undefined) => {
     let error = "";
 
     switch (name) {
@@ -229,6 +229,7 @@ export default function TransferPage() {
                       } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="کد/شناسه مبدا را وارد کنید"
                       maxLength={11}
+                      autoFocus
                     />
                     {errors.fromNationalCode && (
                       <p className="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -381,9 +382,9 @@ export default function TransferPage() {
                         }));
                       }}
                       onBlur={handleBlur}
-                      className={` border-gray-300 dark:border-gray-600 w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
-                      placeholder="توضیح"
-                      maxLength={50}
+                      className={` border-gray-300 dark:border-gray-600 w-full px-3 py-2 border rtl rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      placeholder="توضیحات را وارد نمایید"
+                      maxLength={60}
                     />
                   </div>
                 </div>

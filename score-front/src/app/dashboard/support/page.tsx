@@ -20,6 +20,7 @@ export default function SupportPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [scores, setScores] = useState<any[]>([]);
   const [selectedScore, setSelectedScore] = useState<any | null>(null);
   const [showScoresList, setShowScoresList] = useState(false);
@@ -135,12 +136,12 @@ export default function SupportPage() {
       toast.error("لطفاً تمام فیلدها را پر کنید");
       return;
     }
-    setLoading(true);
+    setSaveLoading(true);
     try {
       const gregorianDate = convertToGregorian(updatedAt);
       if (!gregorianDate) {
         toast.error("فرمت تاریخ نامعتبر است.");
-        setLoading(false);
+        setSaveLoading(false);
         return;
       }
 
@@ -209,7 +210,7 @@ export default function SupportPage() {
       console.error("Submit error:", error);
       toast.error("خطا در ارسال اطلاعات رخ داد.");
     } finally {
-      setLoading(false);
+      setSaveLoading(false);
     }
   };
 
@@ -463,14 +464,16 @@ export default function SupportPage() {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSubmit}
-                disabled={loading || !score || !updatedAt}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 cursor-pointer rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 text-sm"
+                disabled={loading || saveLoading || !score || !updatedAt}
+                className="bg-green-600 flex justify-center min-w-36 hover:bg-green-700 text-white font-bold py-2 px-6 cursor-pointer rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 text-sm"
               >
-                {loading
-                  ? "در حال ذخیره..."
-                  : isEditing
-                  ? "بروزرسانی امتیاز"
-                  : "ایجاد امتیاز"}
+                {saveLoading ? (
+                  <SpinnerSVG className="h-5 w-5 animate-spin text-white" />
+                ) : isEditing ? (
+                  "بروزرسانی امتیاز"
+                ) : (
+                  "ایجاد امتیاز"
+                )}
               </button>
               <button
                 onClick={() => {

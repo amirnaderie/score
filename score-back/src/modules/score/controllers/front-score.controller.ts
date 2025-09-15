@@ -34,7 +34,7 @@ export class FrontScoreController {
   constructor(private readonly frontScoreService: FrontScoreService) { }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch')
+  @Roles('score.confirm', 'score.branch', 'score.admin')
   @Get('scores')
   async getScore(
     @Query() getScoreDto: GetScoreDto,
@@ -47,7 +47,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.view', 'score.confirm', 'score.branch')
+  @Roles('score.view', 'score.confirm', 'score.branch', 'score.admin')
   @Get('scores/by-national-code/:nationalCode')
   async getScoresByNationalCode(
     @Param(
@@ -66,7 +66,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm')
+  @Roles('score.confirm', 'score.admin')
   @Post('scores')
   @HttpCode(200)
   async createScore(@Body() createScoreDto: CreateScoreDto, @GetUser() user: User) {
@@ -75,7 +75,7 @@ export class FrontScoreController {
 
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm')
+  @Roles('score.confirm', 'score.admin')
   @Post('transfer')
   @HttpCode(200)
   transferScore(@Body() transferScoreDto: Partial<TransferScoreDto>, @Req() req, @GetUser() user: User) {
@@ -99,7 +99,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm')
+  @Roles('score.confirm', 'score.admin')
   @Post('estelam-transfer')
   @HttpCode(200)
   estelamTransferScore(@Body() transferScoreDto: Partial<TransferScoreDto>, @Req() req) {
@@ -117,7 +117,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm')
+  @Roles('score.confirm', 'score.admin')
   @Patch('scores/:id')
   async updateScore(
     @Param('id', ParseIntPipe) id: number,
@@ -128,7 +128,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.view', 'score.confirm', 'score.branch')
+  @Roles('score.view', 'score.confirm', 'score.branch', 'score.admin')
   @Get(':nationalCode')
   findByNationalCodeForFront(
     @Param(
@@ -144,7 +144,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch')
+  @Roles('score.confirm', 'score.branch', 'score.admin')
   @Post('consume')
   @HttpCode(200)
   usedScoreForFront(
@@ -155,7 +155,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch')
+  @Roles('score.confirm', 'score.branch', 'score.admin')
   @Put('accept-use')
   @HttpCode(200)
   acceptUsedScoreFront(
@@ -173,7 +173,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch')
+  @Roles('score.confirm', 'score.branch', 'score.admin')
   @Delete('cancel-use')
   @HttpCode(200)
   cancleUsedScoreFront(
@@ -191,7 +191,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm', 'score.branch', 'score.view')
+  @Roles('score.confirm', 'score.branch', 'score.view', 'score.admin')
   @Get('transfers/all')
   async getAllTransfersPaginated(@Query() query: PaginatedTransferDto) {
     const nationalCode = Number(query.nationalCode);

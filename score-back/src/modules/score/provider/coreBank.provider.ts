@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/providers/log.event';
-import { logTypes } from 'src/modules/event/enums/logType.enum';
+import { logTypes } from 'src/modules/log/enums/logType.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager'; // Add this import
 import { ErrorMessages } from 'src/constants/error-messages.constants';

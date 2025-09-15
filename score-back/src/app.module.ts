@@ -12,6 +12,7 @@ import { EventModule } from './modules/event/event.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { LogModule } from './modules/log/log.module';
 @Module({
   imports: [
     CacheModule.register(),
@@ -29,6 +30,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     }),
     ScoreModule,
     AuthModule,
+    LogModule,
   ],
   controllers: [AppController],
   providers: [

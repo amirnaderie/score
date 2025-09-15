@@ -9,7 +9,7 @@ import { DataSource, Repository } from 'typeorm';
 import { UsedScore } from '../entities/used-score.entity';
 import { ScoreInterface } from '../interfaces/score.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { logTypes } from '../../../modules/event/enums/logType.enum';
+import { logTypes } from '../../log/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
@@ -259,6 +259,7 @@ export class SharedProvider {
     personalCode: number,
     referenceCode: number | null,
     description?: string,
+    isUnlimited: boolean = false,
   ) {
     try {
       const resultScores = await this.getScore(
@@ -307,14 +308,14 @@ export class SharedProvider {
           .replace(/:/g, ''),
       ).toString(); // "164205"
 
-      if (Number(scoreRec.transferableScore) < score) {
+      if ((!isUnlimited && Number(scoreRec.transferableScore) < score) || (isUnlimited && Number(scoreRec.usableScore) < score)) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
             fileName: 'shared.provider',
             method: 'transferScore',
-            message: `Insufficient score to transfer from nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} and accountNumber:${toAccountNumber} currentScore is:${scoreRec.usableScore} and requestScore is ${score}`,
+            message: `Insufficient score to transfer from nationalCode:${fromNationalCode} and accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} and accountNumber:${toAccountNumber} currentScore is:${scoreRec.usableScore} and requestScore is ${score} by personalCode${personalCode}`,
             requestBody: JSON.stringify({
               scoreId: scoreRec?.id,
               personalCode,

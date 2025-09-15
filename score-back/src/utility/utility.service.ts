@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as jalaali from 'jalaali-js';
 
 @Injectable()
 export class UtilityService {
@@ -53,4 +54,11 @@ export class UtilityService {
 
     return dateFormat.format(new Date(dateInt).getTime());
   };
+
+  // helper to convert Jalali yyyy-mm-dd → JS Date
+  jalaliToDate = (jalaliStr: string): Date => {
+    const [jy, jm, jd] = jalaliStr.split('-').map(Number);
+    const { gy, gm, gd } = jalaali.toGregorian(jy, jm, jd);
+    return new Date(gy, gm - 1, gd); // JS Date (month is 0-based)
+  }
 }

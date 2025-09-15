@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogParams } from '../../interfaces/log.interface';
 import { LogEvent } from '../log.event';
-import { logTypes } from '../../enums/logType.enum';
+import { logTypes } from '../../../log/enums/logType.enum';
 
 @Injectable()
 export class LogEventEmitterService {

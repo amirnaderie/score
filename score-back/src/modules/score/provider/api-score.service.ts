@@ -9,7 +9,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { logTypes } from '../../../modules/event/enums/logType.enum';
+import { logTypes } from '../../log/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { TransferScore } from '../entities/transfer-score.entity';

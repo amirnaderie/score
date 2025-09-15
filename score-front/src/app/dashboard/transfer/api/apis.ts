@@ -47,19 +47,19 @@ export interface EstelamResponse {
 }
 
 export const transferApi = {
-  getAllTransfers: async (params: TransferSearchParams) => {
-    const queryString = new URLSearchParams(Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined)
-        .map(([key, value]) => [key, String(value)])
-    )).toString()
-    const res = await fetchWithAuthClient(
-      `${process.env.NEXT_PUBLIC_API_URL}/front/score/transfers/all?${queryString}`,
-      {
-        credentials: "include",
-      }
-    );
-    return res;
-  },
+  // getAllTransfers: async (params: TransferSearchParams) => {
+  //   const queryString = new URLSearchParams(Object.fromEntries(
+  //     Object.entries(params).filter(([_, value]) => value !== undefined)
+  //       .map(([key, value]) => [key, String(value)])
+  //   )).toString()
+  //   const res = await fetchWithAuthClient(
+  //     `${process.env.NEXT_PUBLIC_API_URL}/front/score/transfers/all?${queryString}`,
+  //     {
+  //       credentials: "include",
+  //     }
+  //   );
+  //   return res;
+  // },
 
   estelamTransfer: async (data: { fromNationalCode: string; fromAccountNumber: string; toNationalCode: string; toAccountNumber: string }) => {
     const res = await fetchWithAuthClient(

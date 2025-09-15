@@ -1,4 +1,4 @@
-import { logTypes } from '../enums/logType.enum';
+import { logTypes } from '../../log/enums/logType.enum';
 
 export interface LogParams {
   logTypes: logTypes;

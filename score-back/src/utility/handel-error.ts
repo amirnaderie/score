@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/providers/log.event';
-import { logTypes } from 'src/modules/event/enums/logType.enum';
+import { logTypes } from 'src/modules/log/enums/logType.enum';
 import { ErrorMessages } from 'src/constants/error-messages.constants';
 
 export default function handelError(

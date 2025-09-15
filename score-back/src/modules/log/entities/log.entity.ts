@@ -4,7 +4,7 @@ const tehranNowSql = () =>
   "SWITCHOFFSET(SYSDATETIMEOFFSET(), DATEPART(TZOFFSET, SYSDATETIMEOFFSET() AT TIME ZONE 'Iran Standard Time'))";
 
 @Entity('Logs')
-export class Logs {
+export class Log {
   @PrimaryGeneratedColumn()
   id: number;
 

@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { logTypes } from '../../../modules/event/enums/logType.enum';
+import { logTypes } from '../../log/enums/logType.enum';
 import { ErrorMessages } from '../../../constants/error-messages.constants';
 import handelError from '../../../utility/handel-error';
 import { UsedScore } from '../entities/used-score.entity';
@@ -36,9 +36,10 @@ export class FrontScoreService {
     private readonly usedScoreRepository: Repository<UsedScore>,
     @InjectRepository(TransferScore)
     private readonly transferScoreRepository: Repository<TransferScore>,
+
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) { }
+  ) {}
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -265,6 +266,7 @@ export class FrontScoreService {
         Number(user.userName),
         null,
         description,
+        true
       );
 
       // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
@@ -773,4 +775,6 @@ export class FrontScoreService {
       );
     }
   }
+
+
 }

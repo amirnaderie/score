@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import SearchForm from "../_components/serachForm";
-import TransferTable from "../_components/transferTable";
-import Pagination from "../_components/pagination";
-import { transferApi, TransferData } from "@/app/dashboard/transfer/api/apis";
+import SearchForm from "./_components/serachForm";
+import TransferTable from "./_components/transferTable";
+import Pagination from "./_components/pagination";
 import toast from "react-hot-toast";
 import useSWR from "swr";
+import { transferApi } from "./api/apis";
 
 export default function TransferDashboard() {
   const [searchParams, setSearchParams] = useState({

@@ -34,7 +34,7 @@ import { useEffect } from "react";
 
 // Add role mapping for menu items
 const MENU_ROLES = {
-  score: ["score.view", "score.confirm", "score.branch"],
+  score: ["score.view", "score.confirm", "score.branch","score.admin"],
   // Add more menu items and their required roles here
 };
 
@@ -80,9 +80,15 @@ const Sidebar: FC<Props> = (props) => {
       children: [
         {
           label: "انتقال ها",
-          key: "transfer/report",
+          key: "report/transfer",
           isOpen: false,
           ...MENU_ROLES.score,
+        },
+        {
+          label: "لاگ ها",
+          key: "report/log",
+          isOpen: false,
+          roles: ["score.admin"],
         },
       ],
     },

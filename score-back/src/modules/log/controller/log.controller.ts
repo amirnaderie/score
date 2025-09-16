@@ -36,6 +36,7 @@ export class LogController {
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
         methods: query.methods ? query.methods.split(',') : undefined,
+        searchText: query.searchText,
       };
 
       const result = await this.logService.getLogs(params);
@@ -57,101 +58,131 @@ export class LogController {
       };
     }
   }
-
-  @Get('methods')
-  async getAvailableMethods() {
-    try {
-      const methods = await this.logService.getAvailableMethods();
-      return {
-        success: true,
-        data: methods,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to retrieve available methods',
-        error: error.message,
-      };
-    }
-  }
-
-  @Get(':id')
-  async getLogById(@Param('id') id: string) {
-    try {
-      const log = await this.logService.getLogById(parseInt(id, 10));
-      if (!log) {
-        return {
-          success: false,
-          message: 'Log not found',
-        };
-      }
-      return {
-        success: true,
-        data: log,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to retrieve log',
-        error: error.message,
-      };
-    }
-  }
-
-  @Get('export/csv')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.admin')
+  @Get('other-logs')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async exportLogs(
-    @Query() query: ExportLogsDto,
-    @Res() res: Response,
-  ) {
+  async getOtherLogs(@Query() query: Partial<GetLogsDto>) {
     try {
       const params = {
         from: query.from,
         to: query.to,
+        page: query.page,
+        limit: query.limit,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
         methods: query.methods ? query.methods.split(',') : undefined,
+         searchText: query.searchText,
       };
 
-      const logs = await this.logService.exportLogs(params);
-
-      // Set response headers for CSV download
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=logs.csv');
-
-      // Generate CSV content
-      const csvHeaders = [
-        'ID',
-        'File Name',
-        'Log Types',
-        'Method',
-        'Message',
-        'Request Body',
-        'Stack',
-        'User',
-        'Created At',
-      ].join(',');
-
-      const csvRows = logs.map((log) => [
-        log.id,
-        `"${log.fileName || ''}"`,
-        `"${log.logTypes || ''}"`,
-        `"${log.method || ''}"`,
-        `"${(log.message || '').replace(/"/g, '""')}"`,
-        `"${(log.requestBody || '').replace(/"/g, '""')}"`,
-        `"${(log.stack || '').replace(/"/g, '""')}"`,
-        `"${log.user || ''}"`,
-        `"${log.createdAt.toISOString()}"`,
-      ].join(','));
-
-      const csvContent = [csvHeaders, ...csvRows].join('\n');
-      res.send(csvContent);
+      const result = await this.logService.getOtherLogs(params);
+      return {
+        success: true,
+        data: result.data,
+      };
     } catch (error) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      return {
         success: false,
-        message: 'Failed to export logs',
+        message: 'Failed to retrieve logs',
         error: error.message,
-      });
+      };
     }
   }
+
+  // @Get('methods')
+  // async getAvailableMethods() {
+  //   try {
+  //     const methods = await this.logService.getAvailableMethods();
+  //     return {
+  //       success: true,
+  //       data: methods,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to retrieve available methods',
+  //       error: error.message,
+  //     };
+  //   }
+  // }
+
+  // @Get(':id')
+  // async getLogById(@Param('id') id: string) {
+  //   try {
+  //     const log = await this.logService.getLogById(parseInt(id, 10));
+  //     if (!log) {
+  //       return {
+  //         success: false,
+  //         message: 'Log not found',
+  //       };
+  //     }
+  //     return {
+  //       success: true,
+  //       data: log,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: 'Failed to retrieve log',
+  //       error: error.message,
+  //     };
+  //   }
+  // }
+
+  // @Get('export/csv')
+  // @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  // async exportLogs(
+  //   @Query() query: ExportLogsDto,
+  //   @Res() res: Response,
+  // ) {
+  //   try {
+  //     const params = {
+  //       from: query.from,
+  //       to: query.to,
+  //       sortBy: query.sortBy,
+  //       sortOrder: query.sortOrder,
+  //       methods: query.methods ? query.methods.split(',') : undefined,
+  //     };
+
+  //     const logs = await this.logService.exportLogs(params);
+
+  //     // Set response headers for CSV download
+  //     res.setHeader('Content-Type', 'text/csv');
+  //     res.setHeader('Content-Disposition', 'attachment; filename=logs.csv');
+
+  //     // Generate CSV content
+  //     const csvHeaders = [
+  //       'ID',
+  //       'File Name',
+  //       'Log Types',
+  //       'Method',
+  //       'Message',
+  //       'Request Body',
+  //       'Stack',
+  //       'User',
+  //       'Created At',
+  //     ].join(',');
+
+  //     const csvRows = logs.map((log) => [
+  //       log.id,
+  //       `"${log.fileName || ''}"`,
+  //       `"${log.logTypes || ''}"`,
+  //       `"${log.method || ''}"`,
+  //       `"${(log.message || '').replace(/"/g, '""')}"`,
+  //       `"${(log.requestBody || '').replace(/"/g, '""')}"`,
+  //       `"${(log.stack || '').replace(/"/g, '""')}"`,
+  //       `"${log.user || ''}"`,
+  //       `"${log.createdAt.toISOString()}"`,
+  //     ].join(','));
+
+  //     const csvContent = [csvHeaders, ...csvRows].join('\n');
+  //     res.send(csvContent);
+  //   } catch (error) {
+  //     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+  //       success: false,
+  //       message: 'Failed to export logs',
+  //       error: error.message,
+  //     });
+  //   }
+  // }
 }

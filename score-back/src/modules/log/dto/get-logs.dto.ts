@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, IsString, IsIn, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, IsString, IsIn, Min, Max, maxLength, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class GetLogsDto {
@@ -38,5 +38,11 @@ export class GetLogsDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   methods?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  searchText?: string;
 }

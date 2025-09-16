@@ -15,25 +15,39 @@ interface LogEntry {
   createdAt: string;
 }
 
-interface LogsResponse {
-  data: LogEntry[];
-  total: number;
-  page: number;
-  limit: number;
-}
+// interface LogsResponse {
+//   data: LogEntry[];
+//   total: number;
+//   page: number;
+//   limit: number;
+// }
 
 // SWR fetcher function
 const fetcher = async (key: string) => {
-  const { from, to, page, limit, sortBy, sortOrder } = JSON.parse(key);
-  const response = await logsApi.getLogs({
-    from,
-    to,
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-    methods: ["transferScore", "createScore", "updateScore"],
-  });
+  const { from, to, page, limit, sortBy, sortOrder,searchText } = JSON.parse(key);
+  let response
+  if (page === 1)
+    response = await logsApi.getLogs({
+      from,
+      to,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      methods: ["transferScore", "createScore", "updateScore"],
+      searchText
+    });
+  else
+    response = await logsApi.getOtherLogs({
+      from,
+      to,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      methods: ["transferScore", "createScore", "updateScore"],
+      searchText
+    });
   return response;
 };
 
@@ -42,36 +56,49 @@ export default function LogReportPage() {
   const [toDate, setToDate] = useState("");
   const [searchFromDate, setSearchFromDate] = useState("");
   const [searchToDate, setSearchToDate] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<"method" | "createdAt">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
   const [dateFromError, setDateFromError] = useState("");
   const [dateToError, setDateToError] = useState("");
 
   const itemsPerPage = 8;
 
-  // SWR key - only fetch when search has been triggered
   const shouldFetch = searchFromDate && searchToDate && !dateFromError && !dateToError;
   const swrKey = shouldFetch
     ? JSON.stringify({
-        from: convertToGregorian(searchFromDate) || "",
-        to: convertToGregorian(searchToDate) || "",
-        page: currentPage,
-        limit: itemsPerPage,
-        sortBy,
-        sortOrder,
-      })
+      from: convertToGregorian(searchFromDate) || "",
+      to: convertToGregorian(searchToDate) || "",
+      page: currentPage,
+      limit: itemsPerPage,
+      sortBy,
+      sortOrder,
+      searchText: searchKeyword
+    })
     : null;
 
   const { data, error, isLoading } = useSWR(swrKey, fetcher, {
-    dedupingInterval: 2 * 60 * 1000, // Consider data stale after 5 minutes
+    dedupingInterval: 2 * 60 * 1000,
     revalidateIfStale: true, // Auto-refetch stale data
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
-    refreshInterval: 2 * 60 * 1000, // Optional: Auto-refresh every 10 minutes
+    refreshInterval: 2 * 60 * 1000,
   });
 
-  // // Set default date range on mount
+
+  // Handle SWR errors
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching logs:", error);
+      toast.error("خطا در دریافت اطلاعات لاگ");
+    }
+  }, [error]);
+
+  // Set default date range on mount
   // useEffect(() => {
   //   const today = new Date();
   //   const yesterday = new Date(today);
@@ -88,14 +115,6 @@ export default function LogReportPage() {
   //   setFromDate(formatDate(yesterday));
   //   setToDate(formatDate(today));
   // }, []);
-
-  // Handle SWR errors
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching logs:", error);
-      toast.error("خطا در دریافت اطلاعات لاگ");
-    }
-  }, [error]);
 
   // Convert Gregorian date to Persian (Shamsi) date
   const convertToPersianDate = (dateString: string | undefined) => {
@@ -166,26 +185,33 @@ export default function LogReportPage() {
       return;
     }
 
-    // Set search dates to trigger SWR fetch
+    // Set search dates and keyword to trigger SWR fetch
     setSearchFromDate(fromDate);
     setSearchToDate(toDate);
+    setSearchKeyword(searchText);
+    setTotalPages(0);
+    setTotal(0);
     setCurrentPage(1);
   };
 
-  // Handle page change - SWR will automatically refetch due to key change
+
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= (data?.totalPages || 0)) {
+    if (page >= 1 && page <= (data?.totalPages || totalPages)) {
+      if (page === 2 && data?.totalPages) {
+        setTotalPages(data.totalPages)
+        setTotal(data.total || 0)
+      }
       setCurrentPage(page);
     }
   };
 
-  // Handle sort - SWR will automatically refetch due to key change
+
   const handleSort = (column: "method" | "createdAt") => {
     if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
     } else {
       setSortBy(column);
-      setSortOrder("asc");
+      setSortOrder("ASC");
     }
     setCurrentPage(1);
   };
@@ -237,10 +263,27 @@ export default function LogReportPage() {
               <p className="text-red-500 text-sm mt-2">{dateToError}</p>
             )}
           </div>
+          <div className="h-full">
+            <label
+              htmlFor="searchText"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              کلید واژه
+            </label>
+            <input
+              type="text"
+              id="searchText"
+              className="w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              maxLength={40}
+              placeholder=""
+            />
+          </div>
           <div className="flex items-center h-full pb-2">
             <button
               onClick={handleSearch}
-              disabled={isLoading || !fromDate || !toDate }
+              disabled={isLoading || !fromDate || !toDate || dateFromError !== "" || dateToError !== ""}
               className="w-full flex justify-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -261,7 +304,7 @@ export default function LogReportPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-semibold text-xs text-gray-900 dark:text-white">
-                  نتایج ({data.total} رکورد)
+                  نتایج ({data.total || total} رکورد)
                 </h2>
               </div>
 
@@ -278,7 +321,7 @@ export default function LogReportPage() {
                           روش
                           {sortBy === "method" && (
                             <span className="mr-1">
-                              {sortOrder === "asc" ? "↑" : "↓"}
+                              {sortOrder === "ASC" ? "↑" : "↓"}
                             </span>
                           )}
                         </div>
@@ -292,7 +335,7 @@ export default function LogReportPage() {
                           تاریخ ایجاد
                           {sortBy === "createdAt" && (
                             <span className="mr-1">
-                              {sortOrder === "asc" ? "↑" : "↓"}
+                              {sortOrder === "ASC" ? "↑" : "↓"}
                             </span>
                           )}
                         </div>
@@ -329,10 +372,10 @@ export default function LogReportPage() {
               </div>
 
               {/* Pagination */}
-              {data?.totalPages && data.totalPages > 1 && (
+              {((data?.totalPages && data.totalPages > 1) || (totalPages > 1)) && (
                 <div className="flex justify-between items-center mt-4">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    صفحه {currentPage} از {data.totalPages}
+                    صفحه {currentPage} از {data.totalPages || totalPages}
                   </div>
                   <div className="flex space-x-2 rtl:space-x-reverse w-36 gap-x-5">
                     <button
@@ -344,7 +387,7 @@ export default function LogReportPage() {
                     </button>
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === data.totalPages}
+                      disabled={currentPage === data.totalPages || currentPage === totalPages}
                       className="px-3 py-1 border cursor-pointer rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                       بعدی

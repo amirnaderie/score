@@ -123,7 +123,6 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<any> {
     try {
-
       const basic = `${this.clientId}:${this.clientSecret}`;
       const encodedToken = Buffer.from(basic).toString('base64');
       const roles = this.configService.get<string>('ROLES');

@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, Check } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Check, Index } from 'typeorm';
 import { logTypes } from '../enums/logType.enum';
 const tehranNowSql = () =>
   "SWITCHOFFSET(SYSDATETIMEOFFSET(), DATEPART(TZOFFSET, SYSDATETIMEOFFSET() AT TIME ZONE 'Iran Standard Time'))";
@@ -48,6 +48,7 @@ export class Log {
   })
   requestBody: string | null;
 
+  @Index('IX_Logs_created_at') // <-- Non-clustered index
   @Column({
     name: 'created_at',
     type: 'datetime2', // Use datetime2 instead of datetime

@@ -104,22 +104,22 @@ export default function SupportPage() {
           setScore("");
           setUpdatedAt("");
           setIsEditing(false);
-          setIsAdding(true);
+          setIsAdding(false);
           setSelectedScore(null);
           setScores([]);
           setShowScoresList(false);
-          toast.error("امتیازی یافت نشد، امتیاز جدید ایجاد نمایید.");
+          toast.success("جستجو انجام شد.");
         }
       } else if (response.status === 404) {
         setScoreId(null);
         setScore("");
         setUpdatedAt("");
         setIsEditing(false);
-        setIsAdding(true);
+        setIsAdding(false);
         setSelectedScore(null);
         setScores([]);
         setShowScoresList(false);
-        toast.error("امتیازی یافت نشد، امتیاز جدید ایجاد نمایید.");
+        toast.success("جستجو انجام شد.");
       } else {
         toast.error("خطا در جستجوی امتیاز.");
       }
@@ -324,9 +324,25 @@ export default function SupportPage() {
 
         {showScoresList && scores.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              لیست امتیازات
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                لیست امتیازات
+              </h2>
+              <button
+                onClick={() => {
+                  setIsAdding(true);
+                  setIsEditing(false);
+                  setScoreId(null);
+                  setScore("");
+                  setUpdatedAt("");
+                  setSelectedScore(null);
+                  setShowScoresList(false);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-200 text-sm"
+              >
+                افزودن امتیاز جدید
+              </button>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -392,6 +408,30 @@ export default function SupportPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Show when search was performed but no scores found */}
+        {!showScoresList && !isEditing && !isAdding && nationalCode && accountNumber && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <div className="text-center">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                هیچ امتیازی برای این حساب یافت نشد
+              </p>
+              <button
+                onClick={() => {
+                  setIsAdding(true);
+                  setIsEditing(false);
+                  setScoreId(null);
+                  setScore("");
+                  setUpdatedAt("");
+                  setSelectedScore(null);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-200 text-sm"
+              >
+                افزودن امتیاز جدید
+              </button>
             </div>
           </div>
         )}
@@ -483,14 +523,14 @@ export default function SupportPage() {
                   setIsAdding(false);
                   setScoreId(null);
                   setSelectedScore(null);
-                  // If we have scores listed, show them again
+                  // If we have scores listed, show them again, otherwise go back to search state
                   if (scores.length > 0) {
                     setShowScoresList(true);
                   }
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white cursor-pointer font-bold py-2 px-6 rounded-md transition duration-200 text-sm"
               >
-                {isEditing ? "انصراف" : "پاک کردن فرم"}
+                {isEditing ? "انصراف" : "انصراف"}
               </button>
             </div>
           </div>

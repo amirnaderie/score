@@ -47,4 +47,13 @@ export class TransferScore extends BaseEntity {
     nullable: true,
   })
   referenceCode;
+
+   @Column({
+      name: 'reversed_at',
+      type: 'datetime2', // Use datetime2 instead of datetime
+      precision: 0, // Reduced precision to save storage (datetime2(0) takes 6 bytes)
+      select: true,
+      nullable: true,
+    })
+    reversedAt: Date;
 }

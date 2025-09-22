@@ -42,12 +42,12 @@ export default function TransferDashboard() {
       ? null
       : ["transfers", searchParams];
 
-  const { data, error, isLoading } = useSWR(transfersKey, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR(transfersKey, fetcher, {
     dedupingInterval: 5 * 60 * 1000, // Consider data stale after 5 minutes
     revalidateIfStale: true, // Auto-refetch stale data
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    refreshInterval: 10 * 60 * 1000, // Optional: Auto-refresh every 10 minutes
+    revalidateOnFocus: false, // Don't auto-refetch on window focus
+    revalidateOnReconnect: true, // Auto-refetch on network reconnect
+    shouldRetryOnError: false, // Don't retry failed requests automatically
   });
 
   const transfers = data?.data || [];
@@ -80,15 +80,13 @@ export default function TransferDashboard() {
     setSearchParams((prev: any) => ({ ...prev, sortBy, sortOrder }));
   };
 
+  const handleReverseSuccess = () => {
+    mutate(); // Refresh the data after successful reverse transfer
+  };
+
   return (
     <div className="container mx-auto p-2">
       <SearchForm onSearch={handleSearch} loading={loading} />
-
-      {/* {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error.message}
-        </div>     
-      )} */}
 
       <TransferTable
         transfers={transfers}
@@ -96,6 +94,7 @@ export default function TransferDashboard() {
         onSort={handleSort}
         sortBy={searchParams.sortBy}
         sortOrder={searchParams.sortOrder}
+        onReverseSuccess={handleReverseSuccess}
       />
 
       <Pagination

@@ -3,7 +3,12 @@
 import { TransferData } from "@/app/dashboard/transfer/api/apis";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 import TransferTableSkeleton from "./transferTableSkeleton";
-import React from "react";
+import React, { useState } from "react";
+import { hasAccess } from "@/app/lib/utility";
+import { UseStore } from "@/store/useStore";
+import ConfirmModal from "@/app/_components/ConfirmModal";
+import { transferApi } from "@/app/dashboard/transfer/api/apis";
+import toast from "react-hot-toast";
 
 interface TransferTableProps {
   transfers: TransferData[];
@@ -11,6 +16,7 @@ interface TransferTableProps {
   onSort: (sortBy: "date" | "score", sortOrder: "ASC" | "DESC") => void;
   sortBy: string;
   sortOrder: string;
+  onReverseSuccess?: () => void;
 }
 
 export default function TransferTable({
@@ -19,10 +25,46 @@ export default function TransferTable({
   onSort,
   sortBy,
   sortOrder,
+  onReverseSuccess,
 }: TransferTableProps) {
+  const user = UseStore((state) => state.userData);
+  const [reverseLoading, setReverseLoading] = useState<{ [key: number]: boolean }>({});
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => { },
+  });
+
   const handleSort = (field: "date" | "score") => {
     const newOrder = sortBy === field && sortOrder === "DESC" ? "ASC" : "DESC";
     onSort(field, newOrder);
+  };
+
+  const handleReverseTransfer = async (referenceCode: number) => {
+    setModalContent({
+      title: "تایید عودت انتقال",
+      message: "آیا از عودت این انتقال مطمئن هستید؟",
+      onConfirm: async () => {
+        setIsConfirmModalOpen(false);
+        setReverseLoading((prev) => ({ ...prev, [referenceCode]: true }));
+        try {
+          const res = await transferApi.reverseTransfer(referenceCode);
+          const json = await res.json();
+          if (json.statusCode === 200 || res.status === 200) {
+            toast.success("عملیات با موفقیت انجام پذیرفت");
+            onReverseSuccess?.();
+          } else {
+            toast.error(json.message || "خطا در عملیات");
+          }
+        } catch (e) {
+          toast.error("خطا در عملیات!");
+        } finally {
+          setReverseLoading((prev) => ({ ...prev, [referenceCode]: false }));
+        }
+      },
+    });
+    setIsConfirmModalOpen(true);
   };
 
   if (loading) {
@@ -69,6 +111,11 @@ export default function TransferTable({
               تاریخ انتقال{" "}
               {sortBy === "date" && (sortOrder === "ASC" ? "↑" : "↓")}
             </th>
+            {hasAccess(user?.roles || [], ["score.confirm"]) && (
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                وضعیت عودت
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -80,11 +127,10 @@ export default function TransferTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <span
-                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    transfer.direction === "from"
+                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${transfer.direction === "from"
                       ? "bg-red-100 text-red-800"
                       : "bg-green-100 text-green-800"
-                  }`}
+                    }`}
                 >
                   {transfer.direction === "from" ? "ارسال" : "دریافت"}
                 </span>
@@ -107,10 +153,36 @@ export default function TransferTable({
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ltr text-right">
                 {transfer.transferDateShamsi}
               </td>
+              {hasAccess(user?.roles || [], ["score.confirm"]) && transfer.direction === "to" && (
+                <td className="px-6 py-4 whitespace-nowrap text-sm ltr flex justify-end items-center">
+                  {!transfer.reversedAt ? (
+                    <button
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]  cursor-pointer"
+                      onClick={() => handleReverseTransfer(transfer.referenceCode)}
+                      disabled={reverseLoading[transfer.referenceCode]}
+                    >
+                      {reverseLoading[transfer.referenceCode] ? (
+                        <SpinnerSVG className="h-4 w-4 animate-spin text-white" />
+                      ) : (
+                        "عودت"
+                      )}
+                    </button>
+                  ) : (
+                    <span className="text-gray-500 text-xs ">{transfer.reversedAt}</span>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={modalContent.onConfirm}
+        title={modalContent.title}
+        message={modalContent.message}
+      />
     </div>
   );
 }

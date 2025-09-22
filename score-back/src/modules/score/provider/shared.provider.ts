@@ -259,7 +259,7 @@ export class SharedProvider {
     personalCode: number,
     referenceCode: number | null,
     description?: string,
-    isUnlimited: boolean = false,
+    hasSuperAccess: boolean = false,
   ) {
     try {
       const resultScores = await this.getScore(
@@ -308,7 +308,7 @@ export class SharedProvider {
           .replace(/:/g, ''),
       ).toString(); // "164205"
 
-      if ((!isUnlimited && Number(scoreRec.transferableScore) < score) || (isUnlimited && Number(scoreRec.usableScore) < score)) {
+      if ((!hasSuperAccess && Number(scoreRec.transferableScore) < score) || (hasSuperAccess && Number(scoreRec.usableScore) < score)) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({

@@ -36,10 +36,11 @@ export class FrontScoreService {
     private readonly usedScoreRepository: Repository<UsedScore>,
     @InjectRepository(TransferScore)
     private readonly transferScoreRepository: Repository<TransferScore>,
-
+    private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -213,20 +214,20 @@ export class FrontScoreService {
         });
       }
 
-      const scoreFromOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-        fromAccountNumber,
-      ]);
+      // const scoreFromOwner =
+      //   await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      // await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+      //   fromAccountNumber,
+      // ]);
 
-      if (toNationalCode.toString().length < 11) {
-        const scoreToOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
-          toAccountNumber,
-        ]);
+      // if (toNationalCode.toString().length < 11) {
+      //   const scoreToOwner =
+      //     await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+      //   await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+      //     toAccountNumber,
+      //   ]);
 
-      }
+      // }
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({
           where: {
@@ -506,6 +507,9 @@ export class FrontScoreService {
             'jYYYY/jMM/jDD HH:mm:ss',
           ),
           direction: 'from' as const,
+          reversedAt: transfer.reversedAt && moment(transfer.reversedAt).format(
+            'jYYYY/jMM/jDD HH:mm:ss',
+          ),
         })),
         ...toTransfers.map((transfer) => ({
           referenceCode: transfer.referenceCode,
@@ -519,6 +523,9 @@ export class FrontScoreService {
             'jYYYY/jMM/jDD HH:mm:ss',
           ),
           direction: 'to' as const,
+          reversedAt: transfer.reversedAt && moment(transfer.reversedAt).format(
+            'jYYYY/jMM/jDD HH:mm:ss',
+          ),
         })),
       ];
 
@@ -772,6 +779,99 @@ export class FrontScoreService {
         'front-score.service',
         'updateScore',
         { id, updateScoreDto },
+      );
+    }
+  }
+
+  public async reverseTransfer(referenceCode: number, user: User) {
+    try {
+      const staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
+
+      if (!staleMonths) {
+        throw new BadRequestException({
+          message: 'SCORE_STALE_MONTHS environment variable not configured',
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      const query = `EXEC reverseTransfer @0, @1`;
+      const result = await this.dataSource.query(query, [
+        referenceCode,
+        Number(staleMonths),
+      ]);
+
+      // Check if the stored procedure returned success
+      // The stored procedure might return the result in different ways:
+      // 1. As a scalar result in result[0]
+      // 2. As a property in the first object
+      // 3. As @@ROWCOUNT or return value
+      let returnValue = 0;
+
+      if (result && Array.isArray(result)) {
+        if (result.length > 0) {
+          // If result is an array of objects, check for common return value patterns
+          if (typeof result[0] === 'object' && result[0] !== null) {
+            // Check common property names for return values
+            returnValue = result[0].returnValue || result[0].result || result[0][''] || result[0][Object.keys(result[0])[0]] || 0;
+          } else {
+            // If result[0] is a primitive value
+            returnValue = result[0] || 0;
+          }
+        }
+      } else if (typeof result === 'number') {
+        returnValue = result;
+      }
+
+      // Convert to number if it's a string
+      if (typeof returnValue === 'string') {
+        returnValue = parseInt(returnValue, 10) || 0;
+      }
+
+      if (returnValue === 1) {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.INFO,
+            fileName: 'front-score.service',
+            method: 'reverseTransfer',
+            message: `reverse of Transaction with referenceCode ${referenceCode} succeeded by user ${user.userName}`,
+            requestBody: JSON.stringify({ referenceCode }),
+            stack: '',
+          }),
+        );
+
+        return {
+          data: null,
+          message: ErrorMessages.SUCCESSFULL,
+          statusCode: 200,
+        };
+      } else {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.WARNING,
+            fileName: 'front-score.service',
+            method: 'reverseTransfer',
+            message: `Failed to reverse transfer with referenceCode ${referenceCode}. by user ${user.userName}`,
+            requestBody: JSON.stringify({ referenceCode }),
+            stack: '',
+          }),
+        );
+
+        throw new BadRequestException({
+          message: ErrorMessages.OPERATION_FAILED,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'reverseTransfer',
+        { referenceCode },
       );
     }
   }

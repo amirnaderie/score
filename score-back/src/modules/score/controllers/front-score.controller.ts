@@ -210,4 +210,22 @@ export class FrontScoreController {
       sortOrder
     );
   }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.confirm','score.admin')
+  @Post('reverse-transfer')
+  @HttpCode(200)
+  async reverseTransfer(
+    @GetUser() user: User,
+    @Body(
+      'referenceCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    referenceCode: number,
+  ) {
+    return this.frontScoreService.reverseTransfer(referenceCode, user);
+  }
 }

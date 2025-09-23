@@ -7,6 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogEvent } from 'src/modules/event/providers/log.event';
 import { logTypes } from 'src/modules/log/enums/logType.enum';
 import { ErrorMessages } from 'src/constants/error-messages.constants';
+import { CorrelationService } from 'src/modules/correlation/correlation.service';
 
 export default function handelError(
   error: unknown,
@@ -18,6 +19,8 @@ export default function handelError(
   console.error(error);
   if (error instanceof HttpException) throw error;
 
+  const correlationId = CorrelationService.getCorrelationId();
+
   eventEmitter.emit(
     'logEvent',
     new LogEvent({
@@ -27,6 +30,7 @@ export default function handelError(
       message: (error as Error).message || 'Unknown error occurred',
       requestBody: requestBody ? JSON.stringify(requestBody) : undefined,
       stack: (error as Error).stack,
+      correlationId,
     }),
   );
   throw new InternalServerErrorException({

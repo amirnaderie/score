@@ -4,12 +4,16 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
+import { CorrelationMiddleware } from './modules/correlation/correlation.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService>(ConfigService);
   const appPort = config.get<number>('APP_PORT') || 5004;
   const CORS_ORIGINS = config.get<string>('CORS_ORIGINS');
+
+  // Add correlation middleware
+  app.use(new CorrelationMiddleware().use);
 
   const corsOptions = {
     origin: (origin, callback) => {

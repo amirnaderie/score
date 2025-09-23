@@ -13,6 +13,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { LogModule } from './modules/log/log.module';
+import { CorrelationModule } from './modules/correlation/correlation.module';
+
 @Module({
   imports: [
     CacheModule.register(),
@@ -31,6 +33,7 @@ import { LogModule } from './modules/log/log.module';
     ScoreModule,
     AuthModule,
     LogModule,
+    CorrelationModule, // Add CorrelationModule
   ],
   controllers: [AppController],
   providers: [

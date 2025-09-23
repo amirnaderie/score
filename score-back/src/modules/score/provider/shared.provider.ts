@@ -225,7 +225,7 @@ export class SharedProvider {
           logTypes: logTypes.INFO,
           fileName: 'shared.provider',
           method: 'consumeScore',
-          message: `use successfully nationalCode:${scoreRec.nationalCode} accountNumber:${scoreRec.accountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`)}`,
+          message: `use successfully nationalCode:${scoreRec.nationalCode} accountNumber:${scoreRec.accountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${localReferenceCode}`,
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,
@@ -409,7 +409,7 @@ export class SharedProvider {
           logTypes: logTypes.INFO,
           fileName: 'shared.provider',
           method: 'transferScore',
-          message: `transfer score successfully nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} accountNumber:${toAccountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${referenceCode ?? Number(`${formattedDate}${timePart}${personnelData?.branchCode}`)}`,
+          message: `transfer score successfully nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} to nationalCode:${toNationalCode} accountNumber:${toAccountNumber} score:${score} by personalCode:${personalCode} branchCode:${personnelData?.branchCode} and referenceCode:${localReferenceCode}`,
           requestBody: JSON.stringify({
             scoreId: scoreRec?.id,
             personalCode,

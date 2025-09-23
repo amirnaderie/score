@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LogParams } from '../../interfaces/log.interface';
 import { LogEvent } from '../log.event';
 import { logTypes } from '../../../log/enums/logType.enum';
+import { CorrelationService } from 'src/modules/correlation/correlation.service';
 
 @Injectable()
 export class LogEventEmitterService {
@@ -11,6 +12,10 @@ export class LogEventEmitterService {
   emitLog(logParams: LogParams) {
     const { fileName, logTypes, message, method, stack, requestBody } =
       logParams;
+    
+    // Ensure correlation ID is included
+    const correlationId = logParams.correlationId || CorrelationService.getCorrelationId();
+    
     const logEvent = new LogEvent({
       fileName,
       logTypes,
@@ -18,6 +23,7 @@ export class LogEventEmitterService {
       method,
       stack,
       requestBody,
+      correlationId,
     });
 
     this.eventEmitter.emit('logEvent', logEvent);

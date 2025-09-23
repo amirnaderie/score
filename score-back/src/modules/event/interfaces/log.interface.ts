@@ -8,4 +8,5 @@ export interface LogParams {
   message: string;
   stack: string | null | undefined;
   requestBody?: string;
+  correlationId?: string;
 }

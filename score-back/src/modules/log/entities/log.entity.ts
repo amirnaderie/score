@@ -59,9 +59,10 @@ export class Log {
   createdAt: Date;
 
   @Column({
-    type: 'nvarchar',
-    length: '200',
+    type: 'varchar',
+    length: '36',
     nullable: true,
   })
-  user: string;
+  correlationId: string;
+
 }

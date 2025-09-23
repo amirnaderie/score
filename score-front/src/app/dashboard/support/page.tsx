@@ -26,6 +26,7 @@ export default function SupportPage() {
   const [showScoresList, setShowScoresList] = useState(false);
   const [nationalCodeError, setNationalCodeError] = useState("");
   const [accountNumberError, setAccountNumberError] = useState("");
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   const validateNationalCode = (value: string) => {
     let retVal = false;
@@ -65,6 +66,7 @@ export default function SupportPage() {
     if (!validateNationalCode(nationalCode)) return false;
     if (!validateAccountNumber(accountNumber)) return false;
     setLoading(true);
+    setSearchPerformed(true);
     try {
       const response = await ScoreApi.getScoreByNationalCodeAndAccountNumber(
         nationalCode,
@@ -108,6 +110,7 @@ export default function SupportPage() {
           setSelectedScore(null);
           setScores([]);
           setShowScoresList(false);
+          setSearchPerformed(true);
           toast.success("جستجو انجام شد.");
         }
       } else if (response.status === 404) {
@@ -119,6 +122,7 @@ export default function SupportPage() {
         setSelectedScore(null);
         setScores([]);
         setShowScoresList(false);
+        setSearchPerformed(true);
         toast.success("جستجو انجام شد.");
       } else {
         toast.error("خطا در جستجوی امتیاز.");
@@ -128,6 +132,7 @@ export default function SupportPage() {
       toast.error("خطا در جستجو رخ داد.");
     } finally {
       setLoading(false);
+      setSearchPerformed(true);
     }
   };
 
@@ -256,6 +261,7 @@ export default function SupportPage() {
                 setShowScoresList(false);
                 setScores([]);
                 setSelectedScore(null);
+                setSearchPerformed(false);
               }}
               placeholder="کد/شناسه ملی را وارد نمایید"
               maxLength={11}
@@ -290,9 +296,9 @@ export default function SupportPage() {
                 setIsEditing(false);
                 setIsAdding(false);
                 setShowScoresList(false);
-                setShowScoresList(false);
                 setScores([]);
                 setSelectedScore(null);
+                setSearchPerformed(false);
               }}
               placeholder="شماره حساب را وارد نمایید"
               required
@@ -413,7 +419,7 @@ export default function SupportPage() {
         )}
 
         {/* Show when search was performed but no scores found */}
-        {!showScoresList && !isEditing && !isAdding && nationalCode && accountNumber && (
+        {!showScoresList && !isEditing && !isAdding && searchPerformed && scores.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
             <div className="text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-4">

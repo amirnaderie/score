@@ -2,6 +2,8 @@ import { BaseEntity } from 'src/modules/base/base.entity';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { Score } from './score.entity';
 
+@Index('IX_Scores_fromScoreId_reversedAt', ['fromScore', 'reversedAt'])
+@Index('IX_Scores_toScoreId_reversedAt', ['toScore', 'reversedAt'])
 @Entity('TransferScores')
 export class TransferScore extends BaseEntity {
   @Column({
@@ -12,12 +14,12 @@ export class TransferScore extends BaseEntity {
   })
   id: number;
 
-  @Index('IX_Scores_fromScoreId')
+
   @ManyToOne(() => Score, (fromScore) => fromScore.id)
   @JoinColumn({ name: 'fromScoreId' })
   fromScore: Score;
 
-  @Index('IX_Scores_toScoreId')
+
   @ManyToOne(() => Score, (toScore) => toScore.id)
   @JoinColumn({ name: 'toScoreId' })
   toScore: Score;
@@ -48,6 +50,7 @@ export class TransferScore extends BaseEntity {
   })
   referenceCode;
 
+  
    @Column({
       name: 'reversed_at',
       type: 'datetime2', // Use datetime2 instead of datetime

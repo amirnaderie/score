@@ -15,12 +15,20 @@ export class EventHandler {
   @OnEvent('logEvent')
   async handleLogEvent(logEvent: LogEvent) {
     const logParams = logEvent.getLogParams();
-    // const { fileName, logTypes, message, method, stack, requestBody } =
-    //   logParams;
+    const { fileName, logTypes, message, method, stack, requestBody, correlationId } =
+      logParams;
 
     try {
       // Save to database
-      const logData = this.logService.createLog(logParams);
+      const logData = this.logService.createLog({
+        fileName,
+        logTypes,
+        message,
+        method,
+        stack,
+        requestBody,
+        correlationId, // Use the correct field name
+      });
       //await this.LogRepository.save(logData);
 
       // Send to ELK stack
@@ -31,6 +39,7 @@ export class EventHandler {
       //   method,
       //   stack,
       //   requestBody,
+      //   correlationId,
       //   timestamp: new Date().toISOString(),
       // });
     } catch (error) {

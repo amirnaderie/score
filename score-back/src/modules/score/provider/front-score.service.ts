@@ -201,33 +201,38 @@ export class FrontScoreService {
     description: string,
     user: User,
   ) {
+
+    if (
+      fromNationalCode === toNationalCode &&
+      fromAccountNumber === toAccountNumber
+    ) {
+      throw new BadRequestException({
+        message: ErrorMessages.VALIDATE_INFO_FAILED,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+
     try {
+      const scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+        fromAccountNumber,
+      ]);
+    } catch (error) {
+    }
 
-      if (
-        fromNationalCode === toNationalCode &&
-        fromAccountNumber === toAccountNumber
-      ) {
-        throw new BadRequestException({
-          message: ErrorMessages.VALIDATE_INFO_FAILED,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
+    try {
+      if (toNationalCode.toString().length < 11) {
+        const scoreToOwner =
+          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+          toAccountNumber,
+        ]);
       }
-
-      // const scoreFromOwner =
-      //   await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      // await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-      //   fromAccountNumber,
-      // ]);
-
-      // if (toNationalCode.toString().length < 11) {
-      //   const scoreToOwner =
-      //     await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-      //   await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
-      //     toAccountNumber,
-      //   ]);
-
-      // }
+    } catch (error) {
+    }
+    try {
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({
           where: {
@@ -665,7 +670,6 @@ export class FrontScoreService {
     try {
       const { nationalCode, accountNumber, score, updatedAt } = createScoreDto;
 
-
       const scoreOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
       await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
@@ -801,11 +805,6 @@ export class FrontScoreService {
         Number(staleMonths),
       ]);
 
-      // Check if the stored procedure returned success
-      // The stored procedure might return the result in different ways:
-      // 1. As a scalar result in result[0]
-      // 2. As a property in the first object
-      // 3. As @@ROWCOUNT or return value
       let returnValue = 0;
 
       if (result && Array.isArray(result)) {
@@ -850,7 +849,7 @@ export class FrontScoreService {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
-            logTypes: logTypes.WARNING,
+            logTypes: logTypes.INFO,
             fileName: 'front-score.service',
             method: 'reverseTransfer',
             message: `Failed to reverse transfer with referenceCode ${referenceCode}. by user ${user.userName}`,

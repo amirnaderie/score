@@ -111,7 +111,7 @@ export default function TransferTable({
               تاریخ انتقال{" "}
               {sortBy === "date" && (sortOrder === "ASC" ? "↑" : "↓")}
             </th>
-            {hasAccess(user?.roles || [], ["score.confirm"]) && (
+            {hasAccess(user?.roles || [], ["score.confirm","score.admin"]) && (
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 وضعیت عودت
               </th>
@@ -153,7 +153,7 @@ export default function TransferTable({
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ltr text-right">
                 {transfer.transferDateShamsi}
               </td>
-              {hasAccess(user?.roles || [], ["score.confirm"]) && transfer.direction === "to" && (
+              {hasAccess(user?.roles || [], ["score.confirm","score.admin"]) && transfer.direction === "to" && (
                 <td className="px-6 py-4 whitespace-nowrap text-sm ltr flex justify-end items-center">
                   {!transfer.reversedAt ? (
                     <button

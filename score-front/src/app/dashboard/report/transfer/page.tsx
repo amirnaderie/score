@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SearchForm from "./_components/serachForm";
 import TransferTable from "./_components/transferTable";
 import Pagination from "./_components/pagination";
@@ -8,21 +8,24 @@ import toast from "react-hot-toast";
 import useSWR from "swr";
 import { transferApi } from "./api/apis";
 
-export default function TransferDashboard() {
-  const [searchParams, setSearchParams] = useState({
-    nationalCode: "",
-    accountNumber: "",
-    page: 1,
-    limit: 8,
-    sortBy: "date" as const,
-    sortOrder: "DESC" as const,
-  });
+interface SearchParams {
+  nationalCode: string;
+  accountNumber: string;
+  page: number;
+  limit: number;
+  sortBy: "date";
+  sortOrder: "ASC" | "DESC";
+}
 
-  const fetcher = async () => {
-    if (!searchParams.nationalCode || !searchParams.accountNumber) return null;
+export default function TransferDashboard() {
+  // Search state - only set when user performs search
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+
+  const fetcher = async (params: SearchParams) => {
+    if (!params.nationalCode || !params.accountNumber) return null;
 
     try {
-      const response = await transferApi.getAllTransfers(searchParams);
+      const response = await transferApi.getAllTransfers(params);
 
       if (response.status !== 200) {
         toast.error("خطا در واکشی اطلاعات");
@@ -36,19 +39,17 @@ export default function TransferDashboard() {
     }
   };
 
-  // Create a more manageable key
-  const transfersKey =
-    !searchParams.nationalCode || !searchParams.accountNumber
-      ? null
-      : ["transfers", searchParams];
-
-  const { data, error, isLoading, mutate } = useSWR(transfersKey, fetcher, {
-    dedupingInterval: 5 * 60 * 1000, // Consider data stale after 5 minutes
-    revalidateIfStale: true, // Auto-refetch stale data
-    revalidateOnFocus: false, // Don't auto-refetch on window focus
-    revalidateOnReconnect: true, // Auto-refetch on network reconnect
-    shouldRetryOnError: false, // Don't retry failed requests automatically
-  });
+  const { data, error, isLoading, mutate } = useSWR(
+    searchParams,
+    fetcher,
+    {
+      dedupingInterval: 5 * 60 * 1000, // Consider data stale after 5 minutes
+      revalidateIfStale: true, // Auto-refetch stale data
+      revalidateOnFocus: false, // Don't auto-refetch on window focus
+      revalidateOnReconnect: true, // Auto-refetch on network reconnect
+      shouldRetryOnError: false, // Don't retry failed requests automatically
+    }
+  );
 
   const transfers = data?.data || [];
   const pagination = {
@@ -63,26 +64,31 @@ export default function TransferDashboard() {
     }
   }, [error]);
 
-  const handleSearch = (nationalCode: string, accountNumber: string) => {
-    setSearchParams((prev) => ({
-      ...prev,
+  const handleSearch = useCallback((nationalCode: string, accountNumber: string) => {
+    const newSearchParams: SearchParams = {
       nationalCode,
       accountNumber,
       page: 1,
-    }));
-  };
+      limit: 8,
+      sortBy: "date",
+      sortOrder: "DESC",
+    };
+    setSearchParams(newSearchParams);
+  }, []);
 
-  const handlePageChange = (page: number) => {
-    setSearchParams((prev) => ({ ...prev, page }));
-  };
+  const handlePageChange = useCallback((page: number) => {
+    if (!searchParams) return;
+    setSearchParams({ ...searchParams, page });
+  }, [searchParams]);
 
-  const handleSort = (sortBy: "date" | "score", sortOrder: "ASC" | "DESC") => {
-    setSearchParams((prev: any) => ({ ...prev, sortBy, sortOrder }));
-  };
+  const handleSort = useCallback((sortBy: "date" | "score", sortOrder: "ASC" | "DESC") => {
+    if (!searchParams) return;
+    setSearchParams({ ...searchParams, sortBy: "date", sortOrder });
+  }, [searchParams]);
 
-  const handleReverseSuccess = () => {
+  const handleReverseSuccess = useCallback(() => {
     mutate(); // Refresh the data after successful reverse transfer
-  };
+  }, [mutate]);
 
   return (
     <div className="container mx-auto p-2">
@@ -92,13 +98,13 @@ export default function TransferDashboard() {
         transfers={transfers}
         loading={loading}
         onSort={handleSort}
-        sortBy={searchParams.sortBy}
-        sortOrder={searchParams.sortOrder}
+        sortBy={searchParams?.sortBy || "date"}
+        sortOrder={searchParams?.sortOrder || "DESC"}
         onReverseSuccess={handleReverseSuccess}
       />
 
       <Pagination
-        currentPage={searchParams.page}
+        currentPage={searchParams?.page || 1}
         totalPages={pagination.totalPages}
         onPageChange={handlePageChange}
       />

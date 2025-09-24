@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import useSWR from "swr";
 import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
@@ -15,18 +15,21 @@ interface LogEntry {
   createdAt: string;
 }
 
-// interface LogsResponse {
-//   data: LogEntry[];
-//   total: number;
-//   page: number;
-//   limit: number;
-// }
+interface SearchParams {
+  from: string;
+  to: string;
+  page: number;
+  limit: number;
+  sortBy: "method" | "createdAt";
+  sortOrder: "ASC" | "DESC";
+  searchText: string;
+}
 
 // SWR fetcher function
-const fetcher = async (key: string) => {
-  const { from, to, page, limit, sortBy, sortOrder,searchText } = JSON.parse(key);
-  let response
-  if (page === 1)
+const fetcher = async (params: SearchParams) => {
+  const { from, to, page, limit, sortBy, sortOrder, searchText } = params;
+  let response;
+  if (page === 1) {
     response = await logsApi.getLogs({
       from,
       to,
@@ -37,7 +40,7 @@ const fetcher = async (key: string) => {
       methods: ["transferScore", "createScore", "updateScore"],
       searchText
     });
-  else
+  } else {
     response = await logsApi.getOtherLogs({
       from,
       to,
@@ -48,46 +51,36 @@ const fetcher = async (key: string) => {
       methods: ["transferScore", "createScore", "updateScore"],
       searchText
     });
+  }
   return response;
 };
 
 export default function LogReportPage() {
+  // Form inputs
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [searchFromDate, setSearchFromDate] = useState("");
-  const [searchToDate, setSearchToDate] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [sortBy, setSortBy] = useState<"method" | "createdAt">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
   const [dateFromError, setDateFromError] = useState("");
   const [dateToError, setDateToError] = useState("");
 
+  // Search state - only set when user clicks search
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
+
   const itemsPerPage = 8;
 
-  const shouldFetch = searchFromDate && searchToDate && !dateFromError && !dateToError;
-  const swrKey = shouldFetch
-    ? JSON.stringify({
-      from: convertToGregorian(searchFromDate) || "",
-      to: convertToGregorian(searchToDate) || "",
-      page: currentPage,
-      limit: itemsPerPage,
-      sortBy,
-      sortOrder,
-      searchText: searchKeyword
-    })
-    : null;
-
-  const { data, error, isLoading } = useSWR(swrKey, fetcher, {
-    dedupingInterval: 2 * 60 * 1000,
-    revalidateIfStale: true, // Auto-refetch stale data
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    refreshInterval: 2 * 60 * 1000,
-  });
+  const { data, error, isLoading } = useSWR(
+    searchParams ? searchParams : null,
+    fetcher,
+    {
+      dedupingInterval: 2 * 60 * 1000,
+      revalidateIfStale: true,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 2 * 60 * 1000,
+    }
+  );
 
 
   // Handle SWR errors
@@ -124,7 +117,7 @@ export default function LogReportPage() {
   };
 
   // Validate date range (max 7 days difference)
-  const validateDateRange = () => {
+  const validateDateRange = useCallback(() => {
     if (!fromDate || !toDate) return true;
 
     const from = new Date(convertToGregorian(fromDate) || "");
@@ -149,7 +142,14 @@ export default function LogReportPage() {
     }
 
     return true;
-  };
+  }, [fromDate, toDate]);
+
+  // Handle date field blur events
+  const handleDateBlur = useCallback(() => {
+    if (fromDate && toDate) {
+      validateDateRange();
+    }
+  }, [fromDate, toDate, validateDateRange]);
 
   // Format date input as Persian date (YYYY/MM/DD)
   const formatDateInput = (value: string) => {
@@ -175,7 +175,7 @@ export default function LogReportPage() {
   };
 
   // Handle search - trigger SWR revalidation
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     if (!fromDate || !toDate) {
       toast.error("لطفاً بازه زمانی را مشخص کنید");
       return;
@@ -185,36 +185,51 @@ export default function LogReportPage() {
       return;
     }
 
-    // Set search dates and keyword to trigger SWR fetch
-    setSearchFromDate(fromDate);
-    setSearchToDate(toDate);
-    setSearchKeyword(searchText);
+    // Create new search params to trigger SWR fetch
+    const newSearchParams: SearchParams = {
+      from: convertToGregorian(fromDate) || "",
+      to: convertToGregorian(toDate) || "",
+      page: 1,
+      limit: itemsPerPage,
+      sortBy: "createdAt",
+      sortOrder: "DESC",
+      searchText: searchText,
+    };
+
+    setSearchParams(newSearchParams);
     setTotalPages(0);
     setTotal(0);
-    setCurrentPage(1);
-  };
+  }, [fromDate, toDate, searchText]);
 
 
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= (data?.totalPages || totalPages)) {
-      if (page === 2 && data?.totalPages) {
-        setTotalPages(data.totalPages)
-        setTotal(data.total || 0)
-      }
-      setCurrentPage(page);
+  const handlePageChange = useCallback((page: number) => {
+    if (!searchParams || page < 1 || page > (data?.totalPages || totalPages)) return;
+    
+    if (page === 2 && data?.totalPages) {
+      setTotalPages(data.totalPages);
+      setTotal(data.total || 0);
     }
-  };
+    
+    setSearchParams({
+      ...searchParams,
+      page,
+    });
+  }, [searchParams, data?.totalPages, totalPages, data?.total]);
 
-
-  const handleSort = (column: "method" | "createdAt") => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
-    } else {
-      setSortBy(column);
-      setSortOrder("ASC");
-    }
-    setCurrentPage(1);
-  };
+  const handleSort = useCallback((column: "method" | "createdAt") => {
+    if (!searchParams) return;
+    
+    const newSortOrder = searchParams.sortBy === column 
+      ? (searchParams.sortOrder === "ASC" ? "DESC" : "ASC")
+      : "ASC";
+    
+    setSearchParams({
+      ...searchParams,
+      sortBy: column,
+      sortOrder: newSortOrder,
+      page: 1,
+    });
+  }, [searchParams]);
 
   return (
     <div className="container mx-auto p-2">
@@ -235,6 +250,7 @@ export default function LogReportPage() {
               className="w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right"
               value={fromDate}
               onChange={(e) => setFromDate(formatDateInput(e.target.value))}
+              onBlur={handleDateBlur}
               maxLength={10}
               placeholder="مثال: 14030615"
             />
@@ -256,6 +272,7 @@ export default function LogReportPage() {
               className="w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right"
               value={toDate}
               onChange={(e) => setToDate(formatDateInput(e.target.value))}
+              onBlur={handleDateBlur}
               maxLength={10}
               placeholder="مثال: 14030622"
             />
@@ -277,7 +294,7 @@ export default function LogReportPage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               maxLength={40}
-              placeholder=""
+              placeholder=" ... شماره حساب، کد ملی  یا "
             />
           </div>
           <div className="flex items-center h-full pb-2">
@@ -319,9 +336,9 @@ export default function LogReportPage() {
                       >
                         <div className="flex items-center justify-center">
                           روش
-                          {sortBy === "method" && (
+                          {searchParams?.sortBy === "method" && (
                             <span className="mr-1">
-                              {sortOrder === "ASC" ? "↑" : "↓"}
+                              {searchParams?.sortOrder === "ASC" ? "↑" : "↓"}
                             </span>
                           )}
                         </div>
@@ -333,9 +350,9 @@ export default function LogReportPage() {
                       >
                         <div className="flex items-center justify-center">
                           تاریخ ایجاد
-                          {sortBy === "createdAt" && (
+                          {searchParams?.sortBy === "createdAt" && (
                             <span className="mr-1">
-                              {sortOrder === "ASC" ? "↑" : "↓"}
+                              {searchParams?.sortOrder === "ASC" ? "↑" : "↓"}
                             </span>
                           )}
                         </div>
@@ -375,19 +392,19 @@ export default function LogReportPage() {
               {((data?.totalPages && data.totalPages > 1) || (totalPages > 1)) && (
                 <div className="flex justify-between items-center mt-4">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    صفحه {currentPage} از {data.totalPages || totalPages}
+                    صفحه {searchParams?.page || 1} از {data.totalPages || totalPages}
                   </div>
                   <div className="flex space-x-2 rtl:space-x-reverse w-36 gap-x-5">
                     <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange((searchParams?.page || 1) - 1)}
+                      disabled={searchParams?.page === 1}
                       className="px-3 py-1 border cursor-pointer rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                       قبلی
                     </button>
                     <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === data.totalPages || currentPage === totalPages}
+                      onClick={() => handlePageChange((searchParams?.page || 1) + 1)}
+                      disabled={searchParams?.page === data.totalPages || searchParams?.page === totalPages}
                       className="px-3 py-1 border cursor-pointer rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                       بعدی
@@ -399,7 +416,7 @@ export default function LogReportPage() {
           )
         )}
 
-        {data?.data?.length === 0 && !isLoading && searchFromDate && searchToDate && (
+        {data?.data?.length === 0 && !isLoading && searchParams && (
           <div className="text-center py-8 text-gray-500">
             لیست شما خالی است.
           </div>

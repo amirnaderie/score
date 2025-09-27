@@ -883,7 +883,7 @@ export class FrontScoreService {
             logTypes: logTypes.INFO,
             fileName: 'front-score.service',
             method: 'reverseTransfer',
-            message: `Failed to reverse transfer with referenceCode: ${referenceCode}. by user: ${user.userName}`,
+            message: `Failed to reverse transfer with referenceCode: ${referenceCode} by user: ${user.userName}`,
             requestBody: JSON.stringify({ referenceCode }),
             stack: '',
           }),

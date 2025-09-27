@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, HttpStatus, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpStatus,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -40,7 +46,7 @@ export class FrontScoreService {
     private readonly configService: ConfigService,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) { }
+  ) {}
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -131,7 +137,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch { }
+      } catch {}
       return {
         data: {
           scoresRec,
@@ -151,10 +157,12 @@ export class FrontScoreService {
     }
   }
 
-  public async estelamTransferScore(fromNationalCode: number,
+  public async estelamTransferScore(
+    fromNationalCode: number,
     toNationalCode: number,
     fromAccountNumber: number,
-    toAccountNumber: number) {
+    toAccountNumber: number,
+  ) {
     try {
       if (
         fromNationalCode === toNationalCode &&
@@ -169,10 +177,9 @@ export class FrontScoreService {
 
       const scoreFromOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-        fromAccountNumber,
-      ]);
-
+      //await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+      //  fromAccountNumber,
+      //]);
 
       const scoreToOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
@@ -180,13 +187,25 @@ export class FrontScoreService {
         toAccountNumber,
       ]);
 
-      return { message: ErrorMessages.SUCCESSFULL, statusCode: 200, data: { fromName: scoreFromOwner.name || "", toName: scoreToOwner.name || "" } };
+      return {
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+        data: {
+          fromName: scoreFromOwner.name || '',
+          toName: scoreToOwner.name || '',
+        },
+      };
     } catch (error) {
-      handelError(error, this.eventEmitter, 'front-score.service', 'estelamTransferScore', {
-        fromNationalCode,
-        toNationalCode,
-
-      });
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'estelamTransferScore',
+        {
+          fromNationalCode,
+          toNationalCode,
+        },
+      );
     }
   }
 
@@ -201,7 +220,6 @@ export class FrontScoreService {
     description: string,
     user: User,
   ) {
-
     if (
       fromNationalCode === toNationalCode &&
       fromAccountNumber === toAccountNumber
@@ -219,19 +237,16 @@ export class FrontScoreService {
       await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
-    } catch (error) {
+    } catch (error) {}
+
+    if (toNationalCode.toString().length < 11) {
+      const scoreToOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+        toAccountNumber,
+      ]);
     }
 
-    try {
-      if (toNationalCode.toString().length < 11) {
-        const scoreToOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
-          toAccountNumber,
-        ]);
-      }
-    } catch (error) {
-    }
     try {
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({
@@ -272,16 +287,22 @@ export class FrontScoreService {
         Number(user.userName),
         null,
         description,
-        true
+        true,
       );
 
       // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
     } catch (error) {
-      handelError(error, this.eventEmitter, 'front-score.service', 'transferScore', {
-        fromNationalCode,
-        toNationalCode,
-        score,
-      });
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'transferScore',
+        {
+          fromNationalCode,
+          toNationalCode,
+          score,
+        },
+      );
     }
   }
 
@@ -512,9 +533,9 @@ export class FrontScoreService {
             'jYYYY/jMM/jDD HH:mm:ss',
           ),
           direction: 'from' as const,
-          reversedAt: transfer.reversedAt && moment(transfer.reversedAt).format(
-            'jYYYY/jMM/jDD HH:mm:ss',
-          ),
+          reversedAt:
+            transfer.reversedAt &&
+            moment(transfer.reversedAt).format('jYYYY/jMM/jDD HH:mm:ss'),
         })),
         ...toTransfers.map((transfer) => ({
           referenceCode: transfer.referenceCode,
@@ -528,9 +549,9 @@ export class FrontScoreService {
             'jYYYY/jMM/jDD HH:mm:ss',
           ),
           direction: 'to' as const,
-          reversedAt: transfer.reversedAt && moment(transfer.reversedAt).format(
-            'jYYYY/jMM/jDD HH:mm:ss',
-          ),
+          reversedAt:
+            transfer.reversedAt &&
+            moment(transfer.reversedAt).format('jYYYY/jMM/jDD HH:mm:ss'),
         })),
       ];
 
@@ -670,14 +691,14 @@ export class FrontScoreService {
     try {
       const { nationalCode, accountNumber, score, updatedAt } = createScoreDto;
 
-      const scoreOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+      const scoreOwner = await this.bankCoreProvider.getCustomerBriefDetail(
+        Number(nationalCode),
+      );
       await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
         accountNumber,
       ]);
 
       const newScore = this.scoreRepository.create({
-
         nationalCode: Number(nationalCode),
         accountNumber: Number(accountNumber),
         score: score,
@@ -715,15 +736,20 @@ export class FrontScoreService {
     }
   }
 
-  public async updateScore(id: number, updateScoreDto: UpdateScoreDto, user: User) {
+  public async updateScore(
+    id: number,
+    updateScoreDto: UpdateScoreDto,
+    user: User,
+  ) {
     try {
       const score = await this.scoreRepository.findOne({
         where: { id },
       });
-      const { nationalCode, accountNumber } = score
+      const { nationalCode, accountNumber } = score;
 
-      const scoreOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(Number(nationalCode));
+      const scoreOwner = await this.bankCoreProvider.getCustomerBriefDetail(
+        Number(nationalCode),
+      );
       await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
         accountNumber,
       ]);
@@ -747,7 +773,7 @@ export class FrontScoreService {
           error: 'Score not found',
         });
       }
-      const beforScore = score.score
+      const beforScore = score.score;
       if (updateScoreDto.score !== undefined) {
         score.score = updateScoreDto.score;
       }
@@ -812,7 +838,12 @@ export class FrontScoreService {
           // If result is an array of objects, check for common return value patterns
           if (typeof result[0] === 'object' && result[0] !== null) {
             // Check common property names for return values
-            returnValue = result[0].returnValue || result[0].result || result[0][''] || result[0][Object.keys(result[0])[0]] || 0;
+            returnValue =
+              result[0].returnValue ||
+              result[0].result ||
+              result[0][''] ||
+              result[0][Object.keys(result[0])[0]] ||
+              0;
           } else {
             // If result[0] is a primitive value
             returnValue = result[0] || 0;
@@ -834,7 +865,7 @@ export class FrontScoreService {
             logTypes: logTypes.INFO,
             fileName: 'front-score.service',
             method: 'reverseTransfer',
-            message: `reverse of Transaction with referenceCode ${referenceCode} succeeded by user ${user.userName}`,
+            message: `reverse of Transaction with referenceCode: ${referenceCode} succeeded by user: ${user.userName}`,
             requestBody: JSON.stringify({ referenceCode }),
             stack: '',
           }),
@@ -852,7 +883,7 @@ export class FrontScoreService {
             logTypes: logTypes.INFO,
             fileName: 'front-score.service',
             method: 'reverseTransfer',
-            message: `Failed to reverse transfer with referenceCode ${referenceCode}. by user ${user.userName}`,
+            message: `Failed to reverse transfer with referenceCode: ${referenceCode}. by user: ${user.userName}`,
             requestBody: JSON.stringify({ referenceCode }),
             stack: '',
           }),
@@ -874,6 +905,4 @@ export class FrontScoreService {
       );
     }
   }
-
-
 }

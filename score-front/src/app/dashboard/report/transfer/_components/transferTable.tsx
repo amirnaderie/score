@@ -28,12 +28,14 @@ export default function TransferTable({
   onReverseSuccess,
 }: TransferTableProps) {
   const user = UseStore((state) => state.userData);
-  const [reverseLoading, setReverseLoading] = useState<{ [key: number]: boolean }>({});
+  const [reverseLoading, setReverseLoading] = useState<{
+    [key: number]: boolean;
+  }>({});
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState({
     title: "",
     message: "",
-    onConfirm: () => { },
+    onConfirm: () => {},
   });
 
   const handleSort = (field: "date" | "score") => {
@@ -72,7 +74,12 @@ export default function TransferTable({
   }
 
   if (transfers.length === 0) {
-    return <div className="text-center py-4 w-full flex justify-center h-full items-center"> لیست خالی است </div>;
+    return (
+      <div className="text-center py-4 w-full flex justify-center h-full items-center">
+        {" "}
+        لیست خالی است{" "}
+      </div>
+    );
   }
 
   return (
@@ -111,7 +118,7 @@ export default function TransferTable({
               تاریخ انتقال{" "}
               {sortBy === "date" && (sortOrder === "ASC" ? "↑" : "↓")}
             </th>
-            {hasAccess(user?.roles || [], ["score.confirm","score.admin"]) && (
+            {hasAccess(user?.roles || [], ["score.confirm", "score.admin"]) && (
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 وضعیت عودت
               </th>
@@ -127,10 +134,11 @@ export default function TransferTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm">
                 <span
-                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${transfer.direction === "from"
+                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    transfer.direction === "from"
                       ? "bg-red-100 text-red-800"
                       : "bg-green-100 text-green-800"
-                    }`}
+                  }`}
                 >
                   {transfer.direction === "from" ? "ارسال" : "دریافت"}
                 </span>
@@ -153,12 +161,17 @@ export default function TransferTable({
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 ltr text-right">
                 {transfer.transferDateShamsi}
               </td>
-              {hasAccess(user?.roles || [], ["score.confirm","score.admin"]) && transfer.direction === "to" && (
+              {hasAccess(user?.roles || [], [
+                "score.confirm",
+                "score.admin",
+              ]) && (
                 <td className="px-6 py-4 whitespace-nowrap text-sm ltr flex justify-end items-center">
-                  {!transfer.reversedAt ? (
+                  {!transfer.reversedAt && transfer.direction === "to" ? (
                     <button
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]  cursor-pointer"
-                      onClick={() => handleReverseTransfer(transfer.referenceCode)}
+                      onClick={() =>
+                        handleReverseTransfer(transfer.referenceCode)
+                      }
                       disabled={reverseLoading[transfer.referenceCode]}
                     >
                       {reverseLoading[transfer.referenceCode] ? (
@@ -168,7 +181,9 @@ export default function TransferTable({
                       )}
                     </button>
                   ) : (
-                    <span className="text-gray-500 text-xs ">{transfer.reversedAt}</span>
+                    <span className="text-gray-500 text-xs ">
+                      {transfer.reversedAt}
+                    </span>
                   )}
                 </td>
               )}

@@ -7,13 +7,14 @@ import SpinnerSVG from "@/app/assets/svgs/spinnerSvg";
 import { convertToGregorian } from "@/utils/dateConverter";
 import TransferTableSkeleton from "../transfer/_components/transferTableSkeleton";
 import { logsApi } from "./api/apis";
+import { LogMethodLabels } from "@/app/type";
 
-interface LogEntry {
-  id: number;
-  method: string;
-  message: string;
-  createdAt: string;
-}
+// interface LogEntry {
+//   id: number;
+//   method: string;
+//   message: string;
+//   createdAt: string;
+// }
 
 interface SearchParams {
   from: string;
@@ -37,8 +38,13 @@ const fetcher = async (params: SearchParams) => {
       limit,
       sortBy,
       sortOrder,
-      methods: ["transferScore", "createScore", "updateScore"],
-      searchText
+      methods: [
+        "transferScore",
+        "createScore",
+        "updateScore",
+        "reverseTransfer",
+      ],
+      searchText,
     });
   } else {
     response = await logsApi.getOtherLogs({
@@ -48,8 +54,13 @@ const fetcher = async (params: SearchParams) => {
       limit,
       sortBy,
       sortOrder,
-      methods: ["transferScore", "createScore", "updateScore"],
-      searchText
+      methods: [
+        "transferScore",
+        "createScore",
+        "updateScore",
+        "reverseTransfer",
+      ],
+      searchText,
     });
   }
   return response;
@@ -81,7 +92,6 @@ export default function LogReportPage() {
       refreshInterval: 2 * 60 * 1000,
     }
   );
-
 
   // Handle SWR errors
   useEffect(() => {
@@ -201,35 +211,44 @@ export default function LogReportPage() {
     setTotal(0);
   }, [fromDate, toDate, searchText]);
 
+  const handlePageChange = useCallback(
+    (page: number) => {
+      if (!searchParams || page < 1 || page > (data?.totalPages || totalPages))
+        return;
 
-  const handlePageChange = useCallback((page: number) => {
-    if (!searchParams || page < 1 || page > (data?.totalPages || totalPages)) return;
-    
-    if (page === 2 && data?.totalPages) {
-      setTotalPages(data.totalPages);
-      setTotal(data.total || 0);
-    }
-    
-    setSearchParams({
-      ...searchParams,
-      page,
-    });
-  }, [searchParams, data?.totalPages, totalPages, data?.total]);
+      if (page === 2 && data?.totalPages) {
+        setTotalPages(data.totalPages);
+        setTotal(data.total || 0);
+      }
 
-  const handleSort = useCallback((column: "method" | "createdAt") => {
-    if (!searchParams) return;
-    
-    const newSortOrder = searchParams.sortBy === column 
-      ? (searchParams.sortOrder === "ASC" ? "DESC" : "ASC")
-      : "ASC";
-    
-    setSearchParams({
-      ...searchParams,
-      sortBy: column,
-      sortOrder: newSortOrder,
-      page: 1,
-    });
-  }, [searchParams]);
+      setSearchParams({
+        ...searchParams,
+        page,
+      });
+    },
+    [searchParams, data?.totalPages, totalPages, data?.total]
+  );
+
+  const handleSort = useCallback(
+    (column: "method" | "createdAt") => {
+      if (!searchParams) return;
+
+      const newSortOrder =
+        searchParams.sortBy === column
+          ? searchParams.sortOrder === "ASC"
+            ? "DESC"
+            : "ASC"
+          : "ASC";
+
+      setSearchParams({
+        ...searchParams,
+        sortBy: column,
+        sortOrder: newSortOrder,
+        page: 1,
+      });
+    },
+    [searchParams]
+  );
 
   return (
     <div className="container mx-auto p-2">
@@ -300,7 +319,13 @@ export default function LogReportPage() {
           <div className="flex items-center h-full pb-2">
             <button
               onClick={handleSearch}
-              disabled={isLoading || !fromDate || !toDate || dateFromError !== "" || dateToError !== ""}
+              disabled={
+                isLoading ||
+                !fromDate ||
+                !toDate ||
+                dateFromError !== "" ||
+                dateToError !== ""
+              }
               className="w-full flex justify-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -324,7 +349,6 @@ export default function LogReportPage() {
                   نتایج ({data.total || total} رکورد)
                 </h2>
               </div>
-
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
@@ -372,9 +396,7 @@ export default function LogReportPage() {
                         className="hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <td className="px-3 py-3 whitespace-nowrap  text-gray-900 dark:text-white">
-                          {log.method === "createScore" && "ایجاد امتیاز"}
-                          {log.method === "updateScore" && "بروزرسانی امتیاز"}
-                          {log.method === "transferScore" && "انتقال امتیاز"}
+                          {LogMethodLabels[log.method] || log.method}
                         </td>
                         <td className="px-3 w-28 flex justify-center py-3 whitespace-nowrap  text-gray-900 dark:text-white">
                           {convertToPersianDate(log.createdAt)}
@@ -389,22 +411,31 @@ export default function LogReportPage() {
               </div>
 
               {/* Pagination */}
-              {((data?.totalPages && data.totalPages > 1) || (totalPages > 1)) && (
+              {((data?.totalPages && data.totalPages > 1) ||
+                totalPages > 1) && (
                 <div className="flex justify-between items-center mt-4">
                   <div className="text-sm text-gray-700 dark:text-gray-300">
-                    صفحه {searchParams?.page || 1} از {data.totalPages || totalPages}
+                    صفحه {searchParams?.page || 1} از{" "}
+                    {data.totalPages || totalPages}
                   </div>
                   <div className="flex space-x-2 rtl:space-x-reverse w-36 gap-x-5">
                     <button
-                      onClick={() => handlePageChange((searchParams?.page || 1) - 1)}
+                      onClick={() =>
+                        handlePageChange((searchParams?.page || 1) - 1)
+                      }
                       disabled={searchParams?.page === 1}
                       className="px-3 py-1 border cursor-pointer rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                       قبلی
                     </button>
                     <button
-                      onClick={() => handlePageChange((searchParams?.page || 1) + 1)}
-                      disabled={searchParams?.page === data.totalPages || searchParams?.page === totalPages}
+                      onClick={() =>
+                        handlePageChange((searchParams?.page || 1) + 1)
+                      }
+                      disabled={
+                        searchParams?.page === data.totalPages ||
+                        searchParams?.page === totalPages
+                      }
                       className="px-3 py-1 border cursor-pointer rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                       بعدی
@@ -415,7 +446,6 @@ export default function LogReportPage() {
             </div>
           )
         )}
-
         {data?.data?.length === 0 && !isLoading && searchParams && (
           <div className="text-center py-8 text-gray-500">
             لیست شما خالی است.

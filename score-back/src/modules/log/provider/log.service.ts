@@ -8,12 +8,19 @@ import * as jalaali from 'jalaali-js';
 
 @Injectable()
 export class LogService {
+  methods: string[];
   constructor(
     @InjectRepository(Log)
     private readonly logRepository: Repository<Log>,
     private eventEmitter: EventEmitter2,
-
-  ) { }
+  ) {
+    this.methods = [
+      'transferScore',
+      'createScore',
+      'updateScore',
+      'reverseTransfer',
+    ];
+  }
 
   /**
    * Get logs with filtering and pagination
@@ -37,7 +44,6 @@ export class LogService {
         sortOrder = 'DESC',
         searchText = '',
       } = params;
-      const methods: string[] = ["transferScore", "createScore", "updateScore"]
 
       const startDate = new Date(from);
       startDate.setHours(0, 0, 0, 0);
@@ -45,22 +51,20 @@ export class LogService {
       const endDate = new Date(to);
       endDate.setHours(23, 59, 59, 999);
 
-
       const logs = await this.logRepository
         .createQueryBuilder('log')
         .where('log.createdAt >= :startDate', { startDate })
         .andWhere('log.createdAt <= :endDate', { endDate })
-        .andWhere('log.method IN (:...methods)', { methods })
+        .andWhere('log.method IN (:...methods)', { methods: this.methods })
         .andWhere('log.logTypes = :logType', { logType: 'info' })
         .orderBy(`log.${sortBy}`, sortOrder)
         .select(['log.method', 'log.createdAt', 'log.message'])
         .getMany();
-      let filteredLogs
+      let filteredLogs;
 
       if (searchText)
-        filteredLogs = logs.filter(log => log.message.includes(searchText))
-      else
-        filteredLogs = logs
+        filteredLogs = logs.filter((log) => log.message.includes(searchText));
+      else filteredLogs = logs;
 
       // Apply pagination to filtered results
       const startIndex = (Number(page) - 1) * Number(limit);
@@ -76,13 +80,7 @@ export class LogService {
         totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
-      handelError(
-        error,
-        this.eventEmitter,
-        'log.service',
-        'getLogs',
-        params,
-      );
+      handelError(error, this.eventEmitter, 'log.service', 'getLogs', params);
     }
   }
 
@@ -105,7 +103,7 @@ export class LogService {
         sortOrder = 'DESC',
         searchText = '',
       } = params;
-      const methods: string[] = ["transferScore", "createScore", "updateScore"]
+      
 
       const startDate = new Date(from);
       startDate.setHours(0, 0, 0, 0);
@@ -113,24 +111,21 @@ export class LogService {
       const endDate = new Date(to);
       endDate.setHours(23, 59, 59, 999);
 
-
-
       const logs = await this.logRepository
         .createQueryBuilder('log')
         .where('log.createdAt >= :startDate', { startDate })
         .andWhere('log.createdAt <= :endDate', { endDate })
-        .andWhere('log.method IN (:...methods)', { methods })
+        .andWhere('log.method IN (:...methods)', { methods:this.methods })
         .andWhere('log.logTypes = :logType', { logType: 'info' })
         .orderBy(`log.${sortBy}`, sortOrder)
         .select(['log.method', 'log.createdAt', 'log.message'])
         .getMany();
 
-      let filteredLogs
+      let filteredLogs;
 
       if (searchText)
-        filteredLogs = logs.filter(log => log.message.includes(searchText))
-      else
-        filteredLogs = logs
+        filteredLogs = logs.filter((log) => log.message.includes(searchText));
+      else filteredLogs = logs;
 
       // Apply pagination to filtered results
       const startIndex = (Number(page) - 1) * Number(limit);

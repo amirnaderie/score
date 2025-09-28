@@ -1,12 +1,12 @@
+'use client'
 import { formatNumber, handleInput } from "@/app/lib/utility";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface ReverseTransferModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reverseScore: number) => void;
   title: string;
-  message: string;
   maxScore: number;
 }
 
@@ -15,13 +15,14 @@ const ReverseTransferModal: React.FC<ReverseTransferModalProps> = ({
   onClose,
   onConfirm,
   title,
-  message,
   maxScore,
 }) => {
   const [reverseScore, setReverseScore] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   if (!isOpen) return null;
+
+
 
   const handleReverseScoreChange = (value: string) => {
     setReverseScore(value);

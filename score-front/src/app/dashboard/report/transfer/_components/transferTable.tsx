@@ -224,7 +224,6 @@ export default function TransferTable({
         }}
         onConfirm={handleReverseConfirm}
         title="تایید عودت انتقال"
-        message="لطفاً میزان امتیاز عودت را وارد کنید:"
         maxScore={selectedTransfer?.score || 0}
       />
       <ConfirmModal

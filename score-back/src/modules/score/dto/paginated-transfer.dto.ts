@@ -57,6 +57,7 @@ export class TransferResponseDto {
   transferDateShamsi: string;
   direction: 'from' | 'to';
   reversedAt?: string;
+  description?: string;
 }
 
 export class PaginatedTransferResponseDto {

@@ -13,6 +13,7 @@ export interface TransferData {
   transferDateShamsi: string;
   direction: 'from' | 'to';
   reversedAt?: string | null;
+  description?: string | null;
 }
 
 export interface PaginatedTransferResponse {
@@ -92,7 +93,12 @@ export const transferApi = {
     return res;
   },
 
-  reverseTransfer: async (referenceCode: number) => {
+  reverseTransfer: async (params: {
+    referenceCode: number;
+    reverseScore: number;
+    branchCode: number;
+    personalCode: number;
+  }) => {
     const res = await fetchWithAuthClient(
       `${process.env.NEXT_PUBLIC_API_URL}/front/score/reverse-transfer`,
       {
@@ -101,7 +107,7 @@ export const transferApi = {
           'Content-Type': 'application/json',
         },
         credentials: "include",
-        body: JSON.stringify({ referenceCode }),
+        body: JSON.stringify(params),
       }
     );
     return res;

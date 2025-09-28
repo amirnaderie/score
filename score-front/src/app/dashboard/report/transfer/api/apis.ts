@@ -12,6 +12,8 @@ export interface TransferData {
   transferDate: string;
   transferDateShamsi: string;
   direction: 'from' | 'to';
+  reversedAt?: string | null;
+  description?: string | null;
 }
 
 export interface PaginatedTransferResponse {
@@ -61,5 +63,21 @@ export const transferApi = {
     return res;
   },
 
- 
+  reverseTransfer: async (params: {
+    referenceCode: number;
+    reverseScore: number;
+  }) => {
+    const res = await fetchWithAuthClient(
+      `${process.env.NEXT_PUBLIC_API_URL}/front/score/reverse-transfer`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: "include",
+        body: JSON.stringify(params),
+      }
+    );
+    return res;
+  },
 };

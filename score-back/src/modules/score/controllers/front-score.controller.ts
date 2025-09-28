@@ -27,6 +27,7 @@ import { PaginatedTransferDto } from '../dto/paginated-transfer.dto';
 import { GetScoreDto } from '../dto/get-score.dto';
 import { CreateScoreDto } from '../dto/create-score.dto';
 import { UpdateScoreDto } from '../dto/update-score.dto';
+import { ReverseTransferDto } from '../dto/reverse-transfer.dto';
 import { TransferScoreDto } from '../dto/transfer-score.dto';
 
 @Controller('front/score')
@@ -217,15 +218,12 @@ export class FrontScoreController {
   @HttpCode(200)
   async reverseTransfer(
     @GetUser() user: User,
-    @Body(
-      'referenceCode',
-      new ParseIntPipe({
-        exceptionFactory: (error) =>
-          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
-      }),
-    )
-    referenceCode: number,
+    @Body() reverseTransferDto: ReverseTransferDto,
   ) {
-    return this.frontScoreService.reverseTransfer(referenceCode, user);
+    return this.frontScoreService.reverseTransfer(
+      reverseTransferDto.referenceCode,
+      reverseTransferDto.reverseScore,
+      user
+    );
   }
 }

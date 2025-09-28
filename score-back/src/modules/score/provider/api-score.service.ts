@@ -579,4 +579,11 @@ export class ApiScoreService {
       statusCode: 200,
     };
   }
+
+  public async reverseTransfer(
+    referenceCode: number,
+    reverseScore: number,
+  ) {
+    return this.sharedProvider.reverseTransfer(referenceCode, reverseScore)
+  }
 }

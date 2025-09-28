@@ -20,13 +20,14 @@ import { ErrorMessages } from 'src/constants/error-messages.constants';
 import { TransferScoreDto } from '../dto/transfer-score.dto';
 import { UseScoreDto } from '../dto/use-score.dto';
 import { ApiScoreService } from '../provider/api-score.service';
+import { ReverseTransferDto } from '../dto/reverse-transfer.dto';
 
 @Controller('score')
 export class APIScoreController {
   constructor(
     private readonly apiScoreService: ApiScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) {}
+  ) { }
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -165,18 +166,17 @@ export class APIScoreController {
     return this.apiScoreService.cancleUsedScore(referenceCode);
   }
 
-  @Get('testApi/1')
-  testApi1() {
-    return this.bankCoreProvider.getsessionId();
+  @UseGuards(ApiKeyGuard)
+  @Post('reverse-transfer')
+  @HttpCode(200)
+  async reverseTransfer(
+    @Body() reverseTransferDto: ReverseTransferDto,
+  ) {
+    return this.apiScoreService.reverseTransfer(
+      reverseTransferDto.referenceCode,
+      reverseTransferDto.reverseScore,
+    );
   }
 
-  @Get('testApi/2')
-  testApi2() {
-    return this.bankCoreProvider.getCustomerBriefDetail(2880501520);
-  }
 
-  @Get('testApi/3')
-  testApi3() {
-    return this.bankCoreProvider.getDepositDetail(784877, ['3120106246465']);
-  }
 }

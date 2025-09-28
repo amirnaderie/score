@@ -26,7 +26,6 @@ import {
 } from '../dto/paginated-transfer.dto';
 import { TransferScore } from '../entities/transfer-score.entity';
 const moment = require('moment-jalaali');
-import { TransferScoreDescription } from '../entities/transfer-score-description.entity';
 import { UsedScoreDescription } from '../entities/used-score-description.entity';
 import { UpdateScoreDto } from '../dto/update-score.dto';
 import { CreateScoreDto } from '../dto/create-score.dto';
@@ -46,7 +45,7 @@ export class FrontScoreService {
     private readonly configService: ConfigService,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -137,7 +136,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+      } catch { }
       return {
         data: {
           scoresRec,
@@ -237,7 +236,7 @@ export class FrontScoreService {
       await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
-    } catch (error) {}
+    } catch (error) { }
 
     if (toNationalCode.toString().length < 11) {
       const scoreToOwner =
@@ -485,6 +484,12 @@ export class FrontScoreService {
         .createQueryBuilder('transfer')
         .leftJoinAndSelect('transfer.fromScore', 'fromScore')
         .leftJoinAndSelect('transfer.toScore', 'toScore')
+        .leftJoin(
+          'TransferScoreDescriptions',
+          'desc',
+          'desc.referenceCode = transfer.referenceCode'
+        )
+        .addSelect('desc.description', 'description')
         .where('fromScore.nationalCode = :nationalCode', { nationalCode })
         .andWhere('fromScore.accountNumber = :accountNumber', {
           accountNumber,
@@ -495,6 +500,12 @@ export class FrontScoreService {
         .createQueryBuilder('transfer')
         .leftJoinAndSelect('transfer.fromScore', 'fromScore')
         .leftJoinAndSelect('transfer.toScore', 'toScore')
+        .leftJoin(
+          'TransferScoreDescriptions',
+          'desc',
+          'desc.referenceCode = transfer.referenceCode'
+        )
+        .addSelect('desc.description', 'description')
         .where('toScore.nationalCode = :nationalCode', { nationalCode })
         .andWhere('toScore.accountNumber = :accountNumber', { accountNumber });
 
@@ -511,17 +522,17 @@ export class FrontScoreService {
           .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
           .skip(skip)
           .take(limit)
-          .getMany(),
+          .getRawAndEntities(),
         toQuery
           .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
           .skip(Math.max(0, skip - fromCount))
           .take(limit)
-          .getMany(),
+          .getRawAndEntities(),
       ]);
 
       // Combine and format results
       const formattedTransfers: TransferResponseDto[] = [
-        ...fromTransfers.map((transfer) => ({
+        ...fromTransfers.entities.map((transfer, index) => ({
           referenceCode: transfer.referenceCode,
           fromNationalCode: transfer.fromScore.nationalCode,
           fromAccountNumber: transfer.fromScore.accountNumber,
@@ -536,8 +547,9 @@ export class FrontScoreService {
           reversedAt:
             transfer.reversedAt &&
             moment(transfer.reversedAt).format('jYYYY/jMM/jDD HH:mm:ss'),
+          description: fromTransfers.raw[index]?.description || null,
         })),
-        ...toTransfers.map((transfer) => ({
+        ...toTransfers.entities.map((transfer, index) => ({
           referenceCode: transfer.referenceCode,
           fromNationalCode: transfer.fromScore.nationalCode,
           fromAccountNumber: transfer.fromScore.accountNumber,
@@ -552,6 +564,7 @@ export class FrontScoreService {
           reversedAt:
             transfer.reversedAt &&
             moment(transfer.reversedAt).format('jYYYY/jMM/jDD HH:mm:ss'),
+          description: toTransfers.raw[index]?.description || null,
         })),
       ];
 
@@ -813,96 +826,12 @@ export class FrontScoreService {
     }
   }
 
-  public async reverseTransfer(referenceCode: number, user: User) {
-    try {
-      const staleMonths = this.configService.get<string>('SCORE_STALE_MONTHS');
-
-      if (!staleMonths) {
-        throw new BadRequestException({
-          message: 'SCORE_STALE_MONTHS environment variable not configured',
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
-
-      const query = `EXEC reverseTransfer @0, @1`;
-      const result = await this.dataSource.query(query, [
-        referenceCode,
-        Number(staleMonths),
-      ]);
-
-      let returnValue = 0;
-
-      if (result && Array.isArray(result)) {
-        if (result.length > 0) {
-          // If result is an array of objects, check for common return value patterns
-          if (typeof result[0] === 'object' && result[0] !== null) {
-            // Check common property names for return values
-            returnValue =
-              result[0].returnValue ||
-              result[0].result ||
-              result[0][''] ||
-              result[0][Object.keys(result[0])[0]] ||
-              0;
-          } else {
-            // If result[0] is a primitive value
-            returnValue = result[0] || 0;
-          }
-        }
-      } else if (typeof result === 'number') {
-        returnValue = result;
-      }
-
-      // Convert to number if it's a string
-      if (typeof returnValue === 'string') {
-        returnValue = parseInt(returnValue, 10) || 0;
-      }
-
-      if (returnValue === 1) {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'front-score.service',
-            method: 'reverseTransfer',
-            message: `reverse of Transaction with referenceCode: ${referenceCode} succeeded by user: ${user.userName}`,
-            requestBody: JSON.stringify({ referenceCode }),
-            stack: '',
-          }),
-        );
-
-        return {
-          data: null,
-          message: ErrorMessages.SUCCESSFULL,
-          statusCode: 200,
-        };
-      } else {
-        this.eventEmitter.emit(
-          'logEvent',
-          new LogEvent({
-            logTypes: logTypes.INFO,
-            fileName: 'front-score.service',
-            method: 'reverseTransfer',
-            message: `Failed to reverse transfer with referenceCode: ${referenceCode} by user: ${user.userName}`,
-            requestBody: JSON.stringify({ referenceCode }),
-            stack: '',
-          }),
-        );
-
-        throw new BadRequestException({
-          message: ErrorMessages.OPERATION_FAILED,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
-    } catch (error) {
-      handelError(
-        error,
-        this.eventEmitter,
-        'front-score.service',
-        'reverseTransfer',
-        { referenceCode },
-      );
-    }
+  public async reverseTransfer(
+    referenceCode: number,
+    reverseScore: number,
+    user: User
+  ) {
+    return this.sharedProvider.reverseTransfer(referenceCode, reverseScore, user)
   }
+
 }

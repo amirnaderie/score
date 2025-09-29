@@ -29,6 +29,7 @@ import { CreateScoreDto } from '../dto/create-score.dto';
 import { UpdateScoreDto } from '../dto/update-score.dto';
 import { ReverseTransferDto } from '../dto/reverse-transfer.dto';
 import { TransferScoreDto } from '../dto/transfer-score.dto';
+import { FacilitiesInProgressDto } from '../dto/facilities-in-progress.dto';
 
 @Controller('front/score')
 export class FrontScoreController {
@@ -129,6 +130,26 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.admin', 'score.confirm')
+  @Get('taahod')
+  async getTaahod() {
+    return this.frontScoreService.getTaahod();
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.branch')
+  @Get('facilities-in-progress')
+  async getFacilitiesInProgress(
+    @GetUser() user: User,
+    @Query() query: FacilitiesInProgressDto
+  ) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+
+    return this.frontScoreService.getFacilitiesInProgress(user, page, limit);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.view', 'score.confirm', 'score.branch', 'score.admin')
   @Get(':nationalCode')
   findByNationalCodeForFront(
@@ -213,7 +234,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.confirm','score.admin')
+  @Roles('score.confirm', 'score.admin')
   @Post('reverse-transfer')
   @HttpCode(200)
   async reverseTransfer(

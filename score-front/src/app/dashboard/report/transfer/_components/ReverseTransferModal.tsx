@@ -22,8 +22,6 @@ const ReverseTransferModal: React.FC<ReverseTransferModalProps> = ({
 
   if (!isOpen) return null;
 
-
-
   const handleReverseScoreChange = (value: string) => {
     setReverseScore(value);
     setError("");

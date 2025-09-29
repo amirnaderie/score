@@ -29,6 +29,10 @@ const moment = require('moment-jalaali');
 import { UsedScoreDescription } from '../entities/used-score-description.entity';
 import { UpdateScoreDto } from '../dto/update-score.dto';
 import { CreateScoreDto } from '../dto/create-score.dto';
+import {
+  FacilitiesInProgressDto,
+  FacilityInProgressResponseDto,
+} from '../dto/facilities-in-progress.dto';
 
 @Injectable()
 export class FrontScoreService {
@@ -832,6 +836,147 @@ export class FrontScoreService {
     user: User
   ) {
     return this.sharedProvider.reverseTransfer(referenceCode, reverseScore, user)
+  }
+
+  public async getTaahod() {
+    try {
+      const query = `EXEC getTaahod`;
+      const result = await this.dataSource.query(query);
+      
+      let sumTaahod = 0;
+      if (result && Array.isArray(result) && result.length > 0) {
+        // Handle different possible result structures
+        if (typeof result[0] === 'object' && result[0] !== null) {
+          // Check for common property names
+          sumTaahod = result[0].sumTaahod || result[0].result || result[0][''] || result[0][Object.keys(result[0])[0]] || 0;
+        } else {
+          // If result[0] is a primitive value
+          sumTaahod = result[0] || 0;
+        }
+      }
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'getTaahod',
+          message: `getTaahod procedure executed successfully, result: ${sumTaahod}`,
+          requestBody: '{}',
+          stack: '',
+        }),
+      );
+
+      return {
+        data: { sumTaahod },
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'getTaahod',
+        {},
+      );
+    }
+  }
+
+  public async getFacilitiesInProgress(
+    user: User,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    try {
+      // Get user's branch code
+      const userData: Partial<User> = await this.authService.getPersonalData(
+        Number(user.userName),
+      );
+      
+      if (!userData.branchCode) {
+        throw new BadRequestException({
+          message: ErrorMessages.USER_NOT_FOUND,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
+
+      const skip = (page - 1) * limit;
+
+      // Query UsedScores with status 0 for user's branch
+      const queryBuilder = this.usedScoreRepository
+        .createQueryBuilder('usedScore')
+        .leftJoinAndSelect('usedScore.usedScore', 'score')
+        .leftJoin(
+          UsedScoreDescription,
+          'usd',
+          'usd.referenceCode = usedScore.referenceCode',
+        )
+        .addSelect('usd.description', 'description')
+        .where('usedScore.branchCode = :branchCode', {
+          branchCode: userData.branchCode,
+        })
+        .andWhere('usedScore.status = :status', { status: false })
+        .orderBy('usedScore.createdAt', 'DESC');
+
+      // Get total count
+      const total = await queryBuilder.getCount();
+
+      // Get paginated results
+      const usedScores = await queryBuilder
+        .skip(skip)
+        .take(limit)
+        .getRawAndEntities();
+
+      // Format results
+      const formattedResults: FacilityInProgressResponseDto[] =
+        usedScores.entities.map((usedScore, index) => {
+          const score = usedScore.usedScore;
+          return {
+            nationalCode: score.nationalCode,
+            accountNumber: score.accountNumber,
+            usedScore: usedScore.score,
+            createdAt: usedScore.createdAt.toISOString(),
+            createdAtShamsi: moment(usedScore.createdAt).format(
+              'jYYYY/jMM/jDD HH:mm:ss',
+            ),
+            referenceCode: usedScore.referenceCode,
+          };
+        });
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'getFacilitiesInProgress',
+          message: `Facilities in progress retrieved successfully for branchCode: ${userData.branchCode}, total: ${total}`,
+          requestBody: JSON.stringify({ branchCode: userData.branchCode, page, limit }),
+          stack: '',
+        }),
+      );
+
+      return {
+        data: {
+          data: formattedResults,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'getFacilitiesInProgress',
+        { page, limit },
+      );
+    }
   }
 
 }

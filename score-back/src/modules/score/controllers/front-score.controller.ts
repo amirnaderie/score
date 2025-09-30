@@ -130,7 +130,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.admin', 'score.confirm')
+  @Roles('score.admin')
   @Get('taahod')
   async getTaahod() {
     return this.frontScoreService.getTaahod();

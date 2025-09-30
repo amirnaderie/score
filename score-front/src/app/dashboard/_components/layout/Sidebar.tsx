@@ -94,7 +94,7 @@ const Sidebar: FC<Props> = (props) => {
           label: "تعهدات",
           key: "report/taahod",
           isOpen: false,
-          roles: ["score.admin","score.confirm"],
+          roles: ["score.admin"],
         },
         {
           label: "تسهیلات در حال اقدام",

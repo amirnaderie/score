@@ -23,18 +23,18 @@ type INavbarItem = IItem & { children?: IItem[] };
 
 interface Props {
   navState:
-    | "desktop"
-    | "tablet-large"
-    | "tablet-small"
-    | "mobile-large"
-    | "mobile-close";
+  | "desktop"
+  | "tablet-large"
+  | "tablet-small"
+  | "mobile-large"
+  | "mobile-close";
 }
 
 import { useEffect } from "react";
 
 // Add role mapping for menu items
 const MENU_ROLES = {
-  score: ["score.view", "score.confirm", "score.branch","score.admin"],
+  score: ["score.view", "score.confirm", "score.branch", "score.admin"],
   // Add more menu items and their required roles here
 };
 
@@ -158,24 +158,21 @@ const Sidebar: FC<Props> = (props) => {
           bg-cover bg-right bg-no-repeat fixed -right-2 -top-2 bottom-0
          lg:p-4 lg:w-[295px] z-20
           h-[calc(100%+20px)]
-           ${
-             navState === "desktop" ||
-             navState === "mobile-close" ||
-             navState === "tablet-small"
-               ? "w-0 p-0 md:w-[125px] lg:w-[295px]"
-               : " p-5"
-           }
+           ${navState === "desktop" ||
+            navState === "mobile-close" ||
+            navState === "tablet-small"
+            ? "w-0 p-0 md:w-[125px] lg:w-[295px]"
+            : " p-5"
+          }
 
-           ${
-             navState === "tablet-large"
-               ? "w-0 !p-0 md:p-5 md:w-[295px] lg:w-[295px]"
-               : ""
-           }
-           ${
-             navState === "mobile-large"
-               ? "w-[295px] md:w-[125px] lg:w-[295px]"
-               : ""
-           }`}
+           ${navState === "tablet-large"
+            ? "w-0 !p-0 md:p-5 md:w-[295px] lg:w-[295px]"
+            : ""
+          }
+           ${navState === "mobile-large"
+            ? "w-[295px] md:w-[125px] lg:w-[295px]"
+            : ""
+          }`}
       >
         <div className="w-full overflow-hidden">
           <BaseCollapser key={9999}>
@@ -186,24 +183,21 @@ const Sidebar: FC<Props> = (props) => {
             >
               <div
                 className={`w-full flex items-center justify-between rounded-lg px-4 text-sm cursor-pointer py-3 
-                 ${
-                   navState === "desktop" || navState === "tablet-small"
-                     ? "pr-5"
-                     : ""
-                 }
+                 ${navState === "desktop" || navState === "tablet-small"
+                    ? "pr-5"
+                    : ""
+                  }
                   `}
               >
                 <div className="flex flex-col items-start gap-2 w-full">
                   <div
-                    className={`${
-                      navState === "desktop" || navState === "tablet-small"
+                    className={`${navState === "desktop" || navState === "tablet-small"
                         ? " block md:mr-4.5 md:mt-4 mt-0"
                         : ""
-                    }                             ${
-                      navState === "mobile-large" || navState === "mobile-close"
+                      }                             ${navState === "mobile-large" || navState === "mobile-close"
                         ? "md:mr-4.5 md:mt-4 mt-0 "
                         : ""
-                    }
+                      }
                     `}
                   >
                     {/* <Image
@@ -217,49 +211,42 @@ const Sidebar: FC<Props> = (props) => {
                   </div>
                   <div
                     className={`text-white-02 text-xs
-                     ${
-                       navState === "desktop" || navState === "tablet-small"
-                         ? " hidden lg:block"
-                         : ""
-                     }
-                              ${
-                                navState === "desktop" ||
-                                navState === "tablet-small"
-                                  ? " block md:hidden lg:block"
-                                  : ""
-                              }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "block md:hidden lg:block"
-                                  : ""
-                              }
+                     ${navState === "desktop" || navState === "tablet-small"
+                        ? " hidden lg:block"
+                        : ""
+                      }
+                              ${navState === "desktop" ||
+                        navState === "tablet-small"
+                        ? " block md:hidden lg:block"
+                        : ""
+                      }
+                              ${navState === "mobile-large" ||
+                        navState === "mobile-close"
+                        ? "block md:hidden lg:block"
+                        : ""
+                      }
                     `}
                   >
                     نام کـاربـری
                   </div>
                   <div
-                    className={`text-white-01 mr-4 ${
-                      navState === "tablet-small" && "hidden lg:block"
-                    }
-                    
-                      ${
-                        navState === "desktop" || navState === "tablet-small"
-                          ? " hidden lg:block"
-                          : ""
+                    className={`text-white-01 mr-4 ${navState === "tablet-small" && "hidden lg:block"
                       }
-                              ${
-                                navState === "desktop" ||
-                                navState === "tablet-small"
-                                  ? "block md:hidden lg:block"
-                                  : ""
-                              }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "block md:hidden lg:block"
-                                  : ""
-                              }
+                    
+                      ${navState === "desktop" || navState === "tablet-small"
+                        ? " hidden lg:block"
+                        : ""
+                      }
+                              ${navState === "desktop" ||
+                        navState === "tablet-small"
+                        ? "block md:hidden lg:block"
+                        : ""
+                      }
+                              ${navState === "mobile-large" ||
+                        navState === "mobile-close"
+                        ? "block md:hidden lg:block"
+                        : ""
+                      }
                     `}
                   >
                     {user?.personelCode || ""}
@@ -310,41 +297,36 @@ const Sidebar: FC<Props> = (props) => {
                     >
                       <div
                         className={`flex items-center gap-2 w-full
-                                 ${
-                                   navState === "desktop" ||
-                                   navState === "tablet-small"
-                                     ? " md:pr-4.5 lg:p-0"
-                                     : ""
-                                 }
-                              ${
-                                navState === "desktop" ||
-                                navState === "tablet-small"
-                                  ? " md:pr-4.5 lg:p-0"
-                                  : ""
-                              }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "md:pr-4.5 lg:p-0"
-                                  : ""
-                              }
+                                 ${navState === "desktop" ||
+                            navState === "tablet-small"
+                            ? " md:pr-4.5 lg:p-0"
+                            : ""
+                          }
+                              ${navState === "desktop" ||
+                            navState === "tablet-small"
+                            ? " md:pr-4.5 lg:p-0"
+                            : ""
+                          }
+                              ${navState === "mobile-large" ||
+                            navState === "mobile-close"
+                            ? "md:pr-4.5 lg:p-0"
+                            : ""
+                          }
                         `}
                       >
                         {item.iconComponent && (
                           <div className="">{item.iconComponent}</div>
                         )}
                         <div
-                          className={`text-white-01 select-none ${
-                            (navState === "desktop" ||
+                          className={`text-white-01 select-none ${(navState === "desktop" ||
                               navState === "tablet-small" ||
                               navState === "mobile-close") &&
                             "hidden lg:block"
-                          }
-                        ${
-                          navState === "mobile-large"
-                            ? "md:hidden lg:block"
-                            : ""
-                        }
+                            }
+                        ${navState === "mobile-large"
+                              ? "md:hidden lg:block"
+                              : ""
+                            }
                       
                           `}
                         >
@@ -352,41 +334,37 @@ const Sidebar: FC<Props> = (props) => {
                         </div>
                       </div>
                       <div
-                        className={`ml-10 origin-center block ${
-                          item.isOpen ? "" : ""
-                        }
-                        ${
-                          (navState === "desktop" ||
+                        className={`ml-10 origin-center block ${item.isOpen ? "" : ""
+                          }
+                        ${(navState === "desktop" ||
                             navState === "tablet-small" ||
                             navState === "mobile-close") &&
                           "hidden lg:block"
-                        }
-                        ${
-                          navState === "mobile-large"
+                          }
+                        ${navState === "mobile-large"
                             ? "md:hidden lg:block"
                             : ""
-                        }
+                          }
                         `}
                         style={
                           item.isOpen
                             ? {
-                                transform: `rotate(90deg)`,
-                                transition: `transform 300ms`,
-                                transformOrigin: "center center",
-                              }
+                              transform: `rotate(90deg)`,
+                              transition: `transform 300ms`,
+                              transformOrigin: "center center",
+                            }
                             : {
-                                transform: `rotate(-90deg)`,
-                                transition: `transform 300ms`,
-                                transformOrigin: "center center",
-                              }
+                              transform: `rotate(-90deg)`,
+                              transition: `transform 300ms`,
+                              transformOrigin: "center center",
+                            }
                         }
                       >
                         <ArrowDownSvg
                           width={16}
                           height={16}
-                          className={` ${
-                            item.isOpen ? "fill-white-01" : "fill-white-03"
-                          }`}
+                          className={` ${item.isOpen ? "fill-white-01" : "fill-white-03"
+                            }`}
                         />
                       </div>
                     </div>
@@ -400,54 +378,47 @@ const Sidebar: FC<Props> = (props) => {
                             return (
                               <Link
                                 key={`BaseCollapserContent-${idx}`}
-                                className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block mb-2 py-3  ${
-                                  x && `text-sm `
-                                }`}
+                                className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block mb-2 py-3  ${x && `text-sm `
+                                  }`}
                                 href={`/dashboard/${navbarItem.key}`}
                                 onClick={() => handelSelectedItem(navbarItem)}
                                 id="navbar-item"
                               >
                                 <div
                                   className={`flex items-center gap-2 w-full 
-                                                                  ${
-                                                                    navState ===
-                                                                      "desktop" ||
-                                                                    navState ===
-                                                                      "tablet-small"
-                                                                      ? " md:pr-4.5 lg:p-0"
-                                                                      : ""
-                                                                  }
-                              ${
-                                navState === "desktop" ||
-                                navState === "tablet-small"
-                                  ? " md:pr-4.5 lg:p-0"
-                                  : ""
-                              }
-                              ${
-                                navState === "mobile-large" ||
-                                navState === "mobile-close"
-                                  ? "md:pr-4.5 lg:p-0"
-                                  : ""
-                              }
+                                                                  ${navState ===
+                                      "desktop" ||
+                                      navState ===
+                                      "tablet-small"
+                                      ? " md:pr-4.5 lg:p-0"
+                                      : ""
+                                    }
+                              ${navState === "desktop" ||
+                                      navState === "tablet-small"
+                                      ? " md:pr-4.5 lg:p-0"
+                                      : ""
+                                    }
+                              ${navState === "mobile-large" ||
+                                      navState === "mobile-close"
+                                      ? "md:pr-4.5 lg:p-0"
+                                      : ""
+                                    }
                                   `}
                                 >
                                   {item.iconComponent && (
                                     <div className="">{item.iconComponent}</div>
                                   )}
                                   <div
-                                    className={` select-none hover:text-Secondary-01  ${
-                                      x ? "text-Secondary-02" : "text-white-01"
-                                    }  ${
-                                      (navState === "desktop" ||
+                                    className={` select-none hover:text-Secondary-01  ${x ? "text-Secondary-02" : "text-white-01"
+                                      }  ${(navState === "desktop" ||
                                         navState === "tablet-small" ||
                                         navState === "mobile-close") &&
                                       "hidden lg:block"
-                                    }
-                                  ${
-                                    navState === "mobile-large"
-                                      ? "md:hidden lg:block"
-                                      : ""
-                                  }
+                                      }
+                                  ${navState === "mobile-large"
+                                        ? "md:hidden lg:block"
+                                        : ""
+                                      }
                                  mr-3`}
                                   >
                                     {item.children![idx].label}
@@ -466,9 +437,8 @@ const Sidebar: FC<Props> = (props) => {
                 <div className="w-full" key={`navigation-${item.key}`}>
                   <Link
                     key={`navigationNavLink-${item.key}`}
-                    className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block py-3.5 my-1 ${
-                      isActive && ` text-sm `
-                    } `}
+                    className={`transition-colors rounded-lg px-4 w-full cursor-pointer text-sm block py-3.5 my-1 ${isActive && ` text-sm `
+                      } `}
                     href={item.key}
                     onClick={(e) => {
                       handelSelectedItem(item);

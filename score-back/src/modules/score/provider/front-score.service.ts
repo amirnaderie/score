@@ -481,8 +481,6 @@ export class FrontScoreService {
     sortOrder: string = 'DESC',
   ): Promise<PaginatedTransferResponseDto> {
     try {
-      const skip = (page - 1) * limit;
-
       // Create query builder for transfers FROM this account
       const fromQuery = this.transferScoreRepository
         .createQueryBuilder('transfer')
@@ -513,29 +511,18 @@ export class FrontScoreService {
         .where('toScore.nationalCode = :nationalCode', { nationalCode })
         .andWhere('toScore.accountNumber = :accountNumber', { accountNumber });
 
-      // Get total count
-      const [fromCount, toCount] = await Promise.all([
-        fromQuery.getCount(),
-        toQuery.getCount(),
-      ]);
-      const total = fromCount + toCount;
-
-      // Get paginated results
+      // Get all results (without pagination first to group properly)
       const [fromTransfers, toTransfers] = await Promise.all([
         fromQuery
-          .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
-          .skip(skip)
-          .take(limit)
+          .orderBy('transfer.createdAt', 'ASC')
           .getRawAndEntities(),
         toQuery
-          .orderBy('transfer.createdAt', sortOrder as 'ASC' | 'DESC')
-          .skip(Math.max(0, skip - fromCount))
-          .take(limit)
+          .orderBy('transfer.createdAt', 'ASC')
           .getRawAndEntities(),
       ]);
 
-      // Combine and format results
-      const formattedTransfers: TransferResponseDto[] = [
+      // Combine and format all results
+      const allTransfers: TransferResponseDto[] = [
         ...fromTransfers.entities.map((transfer, index) => ({
           referenceCode: transfer.referenceCode,
           fromNationalCode: transfer.fromScore.nationalCode,
@@ -572,8 +559,30 @@ export class FrontScoreService {
         })),
       ];
 
-      // Sort combined results
-      formattedTransfers.sort((a, b) => {
+      // Group by referenceCode and reversedAt, sum scores
+      const groupedTransfers = new Map<string, TransferResponseDto>();
+      
+      allTransfers.forEach(transfer => {
+        // Create composite key: referenceCode + reversedAt (or 'null' if no reversedAt)
+        const groupKey = `${transfer.referenceCode}_${transfer.reversedAt || 'null'}`;
+        const existing = groupedTransfers.get(groupKey);
+        if (existing) {
+          // Sum the scores as numbers, keep other fields from the first item
+          existing.score = Number(existing.score) + Number(transfer.score);
+        } else {
+          // First item with this composite key, ensure score is a number
+          groupedTransfers.set(groupKey, { 
+            ...transfer,
+            score: Number(transfer.score)
+          });
+        }
+      });
+
+      // Convert map to array
+      const groupedTransfersArray = Array.from(groupedTransfers.values());
+
+      // Sort grouped results
+      groupedTransfersArray.sort((a, b) => {
         let comparison = 0;
         if (sortBy === 'date') {
           comparison =
@@ -585,8 +594,10 @@ export class FrontScoreService {
         return sortOrder === 'ASC' ? comparison : -comparison;
       });
 
-      // Apply pagination to combined results
-      const paginatedTransfers = formattedTransfers.slice(0, limit);
+      // Apply pagination to grouped results
+      const total = groupedTransfersArray.length;
+      const skip = (page - 1) * limit;
+      const paginatedTransfers = groupedTransfersArray.slice(skip, skip + limit);
 
       return {
         data: paginatedTransfers,

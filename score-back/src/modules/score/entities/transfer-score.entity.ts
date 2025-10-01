@@ -50,13 +50,21 @@ export class TransferScore extends BaseEntity {
   })
   referenceCode;
 
-  
-   @Column({
-      name: 'reversed_at',
-      type: 'datetime2', // Use datetime2 instead of datetime
-      precision: 0, // Reduced precision to save storage (datetime2(0) takes 6 bytes)
-      select: true,
-      nullable: true,
-    })
-    reversedAt: Date;
+
+  @Column({
+    name: 'reversed_at',
+    type: 'datetime2', // Use datetime2 instead of datetime
+    precision: 0, // Reduced precision to save storage (datetime2(0) takes 6 bytes)
+    select: true,
+    nullable: true,
+  })
+  reversedAt: Date;
+
+
+  @Column({
+    type: 'nvarchar',
+    nullable: true,
+    length: 500,
+  })
+  description: string;
 }

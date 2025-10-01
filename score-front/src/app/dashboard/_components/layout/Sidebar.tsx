@@ -63,13 +63,13 @@ const Sidebar: FC<Props> = (props) => {
           label: "مدیریت امتیاز",
           key: "support",
           isOpen: false,
-          roles: ["score.confirm"],
+          roles: ["score.confirm", "score.admin"],
         },
         {
           label: "انتقال امتیاز",
           key: "transfer",
           isOpen: false,
-          roles: ["score.confirm"],
+          roles: ["score.confirm", "score.admin"],
         },
       ],
     },
@@ -100,7 +100,7 @@ const Sidebar: FC<Props> = (props) => {
           label: "تسهیلات در حال اقدام",
           key: "report/facilities-in-progress",
           isOpen: false,
-          roles: ["score.branch"],
+          ...MENU_ROLES.score,
         },
       ],
     },
@@ -192,8 +192,8 @@ const Sidebar: FC<Props> = (props) => {
                 <div className="flex flex-col items-start gap-2 w-full">
                   <div
                     className={`${navState === "desktop" || navState === "tablet-small"
-                        ? " block md:mr-4.5 md:mt-4 mt-0"
-                        : ""
+                      ? " block md:mr-4.5 md:mt-4 mt-0"
+                      : ""
                       }                             ${navState === "mobile-large" || navState === "mobile-close"
                         ? "md:mr-4.5 md:mt-4 mt-0 "
                         : ""
@@ -319,8 +319,8 @@ const Sidebar: FC<Props> = (props) => {
                         )}
                         <div
                           className={`text-white-01 select-none ${(navState === "desktop" ||
-                              navState === "tablet-small" ||
-                              navState === "mobile-close") &&
+                            navState === "tablet-small" ||
+                            navState === "mobile-close") &&
                             "hidden lg:block"
                             }
                         ${navState === "mobile-large"

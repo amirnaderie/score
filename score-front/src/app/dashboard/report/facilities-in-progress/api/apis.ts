@@ -20,6 +20,7 @@ export interface PaginatedFacilitiesInProgressResponseDto {
 export interface FacilitiesInProgressParams {
   page?: number;
   limit?: number;
+  branchCode?: number;
 }
 
 export interface FacilitiesInProgressResponse {
@@ -33,6 +34,7 @@ export const facilitiesInProgressApi = {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.branchCode) searchParams.append('branchCode', params.branchCode.toString());
     
     const url = `${process.env.NEXT_PUBLIC_API_URL}/front/score/facilities-in-progress${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     

@@ -898,19 +898,30 @@ export class FrontScoreService {
     user: User,
     page: number = 1,
     limit: number = 10,
+    branchCode?: number,
   ) {
     try {
-      // Get user's branch code
-      const userData: Partial<User> = await this.authService.getPersonalData(
-        Number(user.userName),
-      );
+      let targetBranchCode: number;
       
-      if (!userData.branchCode) {
-        throw new BadRequestException({
-          message: ErrorMessages.USER_NOT_FOUND,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
+      // If branchCode is provided (for admin/confirm roles), use it
+      // Otherwise, get user's own branch code (for branch role)
+      if (branchCode) {
+        targetBranchCode = branchCode;
+      } else {
+        // Get user's branch code
+        const userData: Partial<User> = await this.authService.getPersonalData(
+          Number(user.userName),
+        );
+        
+        if (!userData.branchCode) {
+          throw new BadRequestException({
+            message: ErrorMessages.USER_NOT_FOUND,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+        
+        targetBranchCode = userData.branchCode;
       }
 
       const skip = (page - 1) * limit;
@@ -926,7 +937,7 @@ export class FrontScoreService {
         )
         .addSelect('usd.description', 'description')
         .where('usedScore.branchCode = :branchCode', {
-          branchCode: userData.branchCode,
+          branchCode: targetBranchCode,
         })
         .andWhere('usedScore.status = :status', { status: false })
         .orderBy('usedScore.createdAt', 'DESC');
@@ -962,8 +973,8 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'getFacilitiesInProgress',
-          message: `Facilities in progress retrieved successfully for branchCode: ${userData.branchCode}, total: ${total}`,
-          requestBody: JSON.stringify({ branchCode: userData.branchCode, page, limit }),
+          message: `Facilities in progress retrieved successfully for branchCode: ${targetBranchCode}, total: ${total}`,
+          requestBody: JSON.stringify({ branchCode: targetBranchCode, page, limit }),
           stack: '',
         }),
       );

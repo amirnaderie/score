@@ -137,7 +137,7 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles('score.branch')
+  @Roles('score.branch', 'score.admin', 'score.confirm')
   @Get('facilities-in-progress')
   async getFacilitiesInProgress(
     @GetUser() user: User,
@@ -145,8 +145,9 @@ export class FrontScoreController {
   ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
+    const branchCode = query.branchCode ? Number(query.branchCode) : undefined;
 
-    return this.frontScoreService.getFacilitiesInProgress(user, page, limit);
+    return this.frontScoreService.getFacilitiesInProgress(user, page, limit, branchCode);
   }
 
   @UseGuards(AuthGuard, RolesGuard)

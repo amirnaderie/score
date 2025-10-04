@@ -18,4 +18,5 @@ export const ErrorMessages = {
   FORBIDDEN: 'عدم مجوز دسترسی',
   USER_NOT_FOUND: 'اطلاعات کاربر در سامانه افرا یافت نشد',
   COREBANKING_ERROR: 'خطا در اتصال به کر بانکینگ',
+  INVALID_TYPE: 'نوع حساب معتبر نیست',
 };

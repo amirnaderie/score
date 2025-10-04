@@ -49,7 +49,7 @@ export class FrontScoreService {
     private readonly configService: ConfigService,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) { }
+  ) {}
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -140,7 +140,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch { }
+      } catch {}
       return {
         data: {
           scoresRec,
@@ -166,24 +166,43 @@ export class FrontScoreService {
     fromAccountNumber: number,
     toAccountNumber: number,
   ) {
+    if (
+      fromNationalCode === toNationalCode &&
+      fromAccountNumber === toAccountNumber
+    ) {
+      throw new BadRequestException({
+        message: ErrorMessages.VALIDATE_INFO_FAILED,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+    let scoreFromOwner;
     try {
-      if (
-        fromNationalCode === toNationalCode &&
-        fromAccountNumber === toAccountNumber
-      ) {
+      scoreFromOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+        fromAccountNumber,
+      ]);
+    } catch (error) {
+      if (error.status === 400 || error.status === 404) {
+        handelError(
+          error,
+          this.eventEmitter,
+          'front-score.service',
+          'estelamTransferScore',
+          {
+            fromNationalCode,
+            toNationalCode,
+          },
+        );
         throw new BadRequestException({
-          message: ErrorMessages.VALIDATE_INFO_FAILED,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
+          message: error.message,
+          statusCode: error.name,
+          error: error.name,
         });
       }
-
-      const scoreFromOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      //await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-      //  fromAccountNumber,
-      //]);
-
+    }
+    try {
       const scoreToOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
       await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
@@ -234,13 +253,32 @@ export class FrontScoreService {
       });
     }
 
+    let scoreFromOwner;
     try {
-      const scoreFromOwner =
+      scoreFromOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
       await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
-    } catch (error) { }
+    } catch (error) {
+      if (error.status === 400 || error.status === 404) {
+        handelError(
+          error,
+          this.eventEmitter,
+          'front-score.service',
+          'estelamTransferScore',
+          {
+            fromNationalCode,
+            toNationalCode,
+          },
+        );
+        throw new BadRequestException({
+          message: error.message,
+          statusCode: error.name,
+          error: error.name,
+        });
+      }
+    }
 
     if (toNationalCode.toString().length < 11) {
       const scoreToOwner =
@@ -489,7 +527,7 @@ export class FrontScoreService {
         .leftJoin(
           'TransferScoreDescriptions',
           'desc',
-          'desc.referenceCode = transfer.referenceCode'
+          'desc.referenceCode = transfer.referenceCode',
         )
         .addSelect('desc.description', 'description')
         .where('fromScore.nationalCode = :nationalCode', { nationalCode })
@@ -505,7 +543,7 @@ export class FrontScoreService {
         .leftJoin(
           'TransferScoreDescriptions',
           'desc',
-          'desc.referenceCode = transfer.referenceCode'
+          'desc.referenceCode = transfer.referenceCode',
         )
         .addSelect('desc.description', 'description')
         .where('toScore.nationalCode = :nationalCode', { nationalCode })
@@ -513,12 +551,8 @@ export class FrontScoreService {
 
       // Get all results (without pagination first to group properly)
       const [fromTransfers, toTransfers] = await Promise.all([
-        fromQuery
-          .orderBy('transfer.createdAt', 'ASC')
-          .getRawAndEntities(),
-        toQuery
-          .orderBy('transfer.createdAt', 'ASC')
-          .getRawAndEntities(),
+        fromQuery.orderBy('transfer.createdAt', 'ASC').getRawAndEntities(),
+        toQuery.orderBy('transfer.createdAt', 'ASC').getRawAndEntities(),
       ]);
 
       // Combine and format all results
@@ -561,8 +595,8 @@ export class FrontScoreService {
 
       // Group by referenceCode and reversedAt, sum scores
       const groupedTransfers = new Map<string, TransferResponseDto>();
-      
-      allTransfers.forEach(transfer => {
+
+      allTransfers.forEach((transfer) => {
         // Create composite key: referenceCode + reversedAt (or 'null' if no reversedAt)
         const groupKey = `${transfer.referenceCode}_${transfer.reversedAt || 'null'}`;
         const existing = groupedTransfers.get(groupKey);
@@ -571,9 +605,9 @@ export class FrontScoreService {
           existing.score = Number(existing.score) + Number(transfer.score);
         } else {
           // First item with this composite key, ensure score is a number
-          groupedTransfers.set(groupKey, { 
+          groupedTransfers.set(groupKey, {
             ...transfer,
-            score: Number(transfer.score)
+            score: Number(transfer.score),
           });
         }
       });
@@ -597,7 +631,10 @@ export class FrontScoreService {
       // Apply pagination to grouped results
       const total = groupedTransfersArray.length;
       const skip = (page - 1) * limit;
-      const paginatedTransfers = groupedTransfersArray.slice(skip, skip + limit);
+      const paginatedTransfers = groupedTransfersArray.slice(
+        skip,
+        skip + limit,
+      );
 
       return {
         data: paginatedTransfers,
@@ -844,22 +881,31 @@ export class FrontScoreService {
   public async reverseTransfer(
     referenceCode: number,
     reverseScore: number,
-    user: User
+    user: User,
   ) {
-    return this.sharedProvider.reverseTransfer(referenceCode, reverseScore, user)
+    return this.sharedProvider.reverseTransfer(
+      referenceCode,
+      reverseScore,
+      user,
+    );
   }
 
   public async getTaahod() {
     try {
       const query = `EXEC getTaahod`;
       const result = await this.dataSource.query(query);
-      
+
       let sumTaahod = 0;
       if (result && Array.isArray(result) && result.length > 0) {
         // Handle different possible result structures
         if (typeof result[0] === 'object' && result[0] !== null) {
           // Check for common property names
-          sumTaahod = result[0].sumTaahod || result[0].result || result[0][''] || result[0][Object.keys(result[0])[0]] || 0;
+          sumTaahod =
+            result[0].sumTaahod ||
+            result[0].result ||
+            result[0][''] ||
+            result[0][Object.keys(result[0])[0]] ||
+            0;
         } else {
           // If result[0] is a primitive value
           sumTaahod = result[0] || 0;
@@ -902,7 +948,7 @@ export class FrontScoreService {
   ) {
     try {
       let targetBranchCode: number;
-      
+
       // If branchCode is provided (for admin/confirm roles), use it
       // Otherwise, get user's own branch code (for branch role)
       if (branchCode) {
@@ -912,7 +958,7 @@ export class FrontScoreService {
         const userData: Partial<User> = await this.authService.getPersonalData(
           Number(user.userName),
         );
-        
+
         if (!userData.branchCode) {
           throw new BadRequestException({
             message: ErrorMessages.USER_NOT_FOUND,
@@ -920,7 +966,7 @@ export class FrontScoreService {
             error: 'Bad Request',
           });
         }
-        
+
         targetBranchCode = userData.branchCode;
       }
 
@@ -974,7 +1020,11 @@ export class FrontScoreService {
           fileName: 'front-score.service',
           method: 'getFacilitiesInProgress',
           message: `Facilities in progress retrieved successfully for branchCode: ${targetBranchCode}, total: ${total}`,
-          requestBody: JSON.stringify({ branchCode: targetBranchCode, page, limit }),
+          requestBody: JSON.stringify({
+            branchCode: targetBranchCode,
+            page,
+            limit,
+          }),
           stack: '',
         }),
       );
@@ -1000,5 +1050,4 @@ export class FrontScoreService {
       );
     }
   }
-
 }

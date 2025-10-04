@@ -1,4 +1,10 @@
-import { BadRequestException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -201,14 +207,32 @@ export class BankCoreProvider {
         const foundDeposit = response?.data?.result?.depositBeans.find(
           (item) => item.depositNumber === depositNumber[0].toString(),
         );
-        if (!foundDeposit || foundDeposit.depositStatus === 'CLOSE') {
+        if (!foundDeposit) {
           this.eventEmitter.emit(
             'logEvent',
             new LogEvent({
               logTypes: logTypes.ERROR,
               fileName: 'coreBank.provide.ts',
               method: 'getDepositDetail',
-              message: `deposit not found for cif:${cif} and depositNumber:${depositNumber[0]} or it is close, its depositStatus is ${foundDeposit ? foundDeposit.depositStatus : 'invalid'}`,
+              message: `depositNumber:${depositNumber[0]} is not found for cif:${cif} its depositStatus is ${foundDeposit ? foundDeposit.depositStatus : 'invalid'}`,
+              requestBody: JSON.stringify({ cif, depositNumber }),
+              stack: '',
+            }),
+          );
+          throw new BadRequestException({
+            message: ErrorMessages.NOT_FOUND,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+        if (foundDeposit.depositStatus === 'CLOSE') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'coreBank.provide.ts',
+              method: 'getDepositDetail',
+              message: `depositNumber:${depositNumber[0]} or it is close, its depositStatus is ${foundDeposit ? foundDeposit.depositStatus : 'invalid'}`,
               requestBody: JSON.stringify({ cif, depositNumber }),
               stack: '',
             }),
@@ -233,14 +257,15 @@ export class BankCoreProvider {
               method: 'getDepositDetail',
               message: `the deposit ${depositNumber[0]} is not valid type, its type is ${foundDeposit.depositType.toString()}`,
               requestBody: JSON.stringify({
-                cif, depositNumber
+                cif,
+                depositNumber,
               }),
               stack: '',
             }),
           );
 
           throw new BadRequestException({
-            message: ErrorMessages.NOTACTIVE,
+            message: ErrorMessages.INVALID_TYPE,
             statusCode: HttpStatus.BAD_REQUEST,
             error: 'Bad Request',
           });

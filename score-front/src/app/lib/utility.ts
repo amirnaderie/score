@@ -19,9 +19,7 @@ export const generateToken = (length: number): string => {
 };
 
 export const validateIranianNationalCode = (nationalCode: number) => {
-
-  if (nationalCode.toString().length === 11)
-    return true
+  if (nationalCode.toString().length === 11) return true;
 
   // Check if input is provided
   if (!nationalCode) {
@@ -75,10 +73,10 @@ export const validateIranianNationalCode = (nationalCode: number) => {
 };
 
 // Format number with thousands separator
-export const formatNumber = (value: string) => {
+export const formatNumber = (value: string | number) => {
   if (!value) return "";
   // Remove all non-digit characters
-  const digits = value.replace(/\D/g, "");
+  const digits = value.toString().replace(/\D/g, "");
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
@@ -91,6 +89,6 @@ export const onlyLettersAndNumbers = (str: string | undefined) => {
   return str && /^[\u0600-\u06FFA-Za-z0-9._/,-\s\u200C]*$/.test(str);
 };
 
-export const toEnglishDigits=(str:string)=> {
-  return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
-}
+export const toEnglishDigits = (str: string) => {
+  return str.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
+};

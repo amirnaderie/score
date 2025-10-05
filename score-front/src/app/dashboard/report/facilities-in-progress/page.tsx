@@ -113,8 +113,8 @@ export default function FacilitiesInProgressPage() {
                   handleInput(e, 15);
                   setBranchCode(e.target.value);
                 }}
-                placeholder="شاخص شعبه را وارد کنید"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="شاخص شعبه را وارد نمایید"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder:text-sm"
                 maxLength={15}
               />
             </div>

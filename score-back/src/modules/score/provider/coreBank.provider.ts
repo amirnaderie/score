@@ -151,7 +151,7 @@ export class BankCoreProvider {
             logTypes: logTypes.ERROR,
             fileName: 'coreBank.provide.ts',
             method: 'getCustomerBriefDetail',
-            message: `getCustomerBriefDetail not found data for nationalCode:${nationalCode}`,
+            message: `getCustomerBriefDetail not found data for nationalCode: ${nationalCode}`,
             requestBody: JSON.stringify({ nationalCode }),
             stack: '',
           }),
@@ -255,7 +255,7 @@ export class BankCoreProvider {
               logTypes: logTypes.INFO,
               fileName: 'coreBank.provide.ts',
               method: 'getDepositDetail',
-              message: `the deposit ${depositNumber[0]} is not valid type, its type is ${foundDeposit.depositType.toString()}`,
+              message: `the depositNumber: ${depositNumber[0]} is not valid type, its type is ${foundDeposit.depositType.toString()}`,
               requestBody: JSON.stringify({
                 cif,
                 depositNumber,

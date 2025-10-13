@@ -1,5 +1,6 @@
 import {
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -7,14 +8,15 @@ import {
 } from 'class-validator';
 
 export class GetTransferScoreDto {
-  @IsNotEmpty()
+  //@IsNotEmpty()
+  @IsOptional()
   @IsString()
   @Matches(/^\d+$/, { message: 'کد ملی باید عددی باشد' })
   @MaxLength(11)
   @MinLength(5)
   nationalCode: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @Matches(/^\d+$/, { message: 'شماره حساب باید عددی باشد' })
   @MaxLength(14)

@@ -5,7 +5,7 @@ import {
   HttpStatus,
   ConflictException,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Score } from '../entities/score.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -36,9 +36,7 @@ export class ApiScoreService {
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
     private readonly sharedProvider: SharedProvider,
-  ) {
-
-  }
+  ) {}
 
   public async findByNationalCode(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -146,13 +144,11 @@ export class ApiScoreService {
         });
       }
 
-
       const scoreFromOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
       await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
-
 
       if (toNationalCode.toString().length < 11) {
         const scoreToOwner =
@@ -160,8 +156,6 @@ export class ApiScoreService {
         await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
           toAccountNumber,
         ]);
-
-
       }
       if (referenceCode) {
         const foundReferenceCode = await this.transferScoreRepository.findOne({
@@ -256,8 +250,6 @@ export class ApiScoreService {
       accountNumber,
     ]);
 
-
-
     // const scoreRec: ScoreInterface =
     //   await this.scoreRepository.query(
     //     'exec getScores @nationalCode=@0,@accountNumber=@1',
@@ -304,12 +296,24 @@ export class ApiScoreService {
     fromNationalCode: number,
     fromAccountNumber: number,
   ) {
-    const coresRec = await this.scoreRepository.findOne({
-      where: {
-        nationalCode: fromNationalCode,
-        accountNumber: fromAccountNumber,
-      },
-    });
+    const where: any = {};
+    if (fromNationalCode) {
+      where.nationalCode = fromNationalCode;
+    }
+    if (fromAccountNumber) {
+      where.accountNumber = fromAccountNumber;
+    }
+    const coresRec =
+      Object.keys(where).length > 0
+        ? await this.scoreRepository.find({ where })
+        : await this.scoreRepository.find();
+
+    // const coresRec = await this.scoreRepository.find({
+    //   where: {
+    //     nationalCode: fromNationalCode,
+    //     accountNumber: fromAccountNumber,
+    //   },
+    // });
     if (!coresRec) {
       this.eventEmitter.emit(
         'logEvent',
@@ -335,7 +339,7 @@ export class ApiScoreService {
     }
     const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
-        fromScore: { id: coresRec.id },
+        fromScore: { id: In(coresRec.map((c) => c.id)) },
       },
       relations: ['fromScore', 'toScore'],
     });
@@ -348,6 +352,7 @@ export class ApiScoreService {
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
       createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
+      reversed_at:ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
     }));
     return {
       data,
@@ -357,12 +362,18 @@ export class ApiScoreService {
   }
 
   async getTransferScoreTo(toNationalCode: number, toAccountNumber: number) {
-    const coresRec = await this.scoreRepository.findOne({
-      where: {
-        nationalCode: toNationalCode,
-        accountNumber: toAccountNumber,
-      },
-    });
+    // Build where condition dynamically
+    const where: any = {};
+    if (toNationalCode) {
+      where.nationalCode = toNationalCode;
+    }
+    if (toAccountNumber) {
+      where.accountNumber = toAccountNumber;
+    }
+    const coresRec =
+      Object.keys(where).length > 0
+        ? await this.scoreRepository.find({ where })
+        : await this.scoreRepository.find();
     if (!coresRec) {
       this.eventEmitter.emit(
         'logEvent',
@@ -387,7 +398,7 @@ export class ApiScoreService {
     }
     const TransferScoreRec = await this.transferScoreRepository.find({
       where: {
-        toScore: { id: coresRec.id },
+        toScore: { id: In(coresRec.map((c) => c.id)) },
       },
       relations: ['fromScore', 'toScore'],
     });
@@ -400,6 +411,8 @@ export class ApiScoreService {
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
       createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
+      reversed_at:
+        ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
     }));
     return {
       data,
@@ -580,10 +593,7 @@ export class ApiScoreService {
     };
   }
 
-  public async reverseTransfer(
-    referenceCode: number,
-    reverseScore: number,
-  ) {
-    return this.sharedProvider.reverseTransfer(referenceCode, reverseScore)
+  public async reverseTransfer(referenceCode: number, reverseScore: number) {
+    return this.sharedProvider.reverseTransfer(referenceCode, reverseScore);
   }
 }

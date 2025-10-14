@@ -27,7 +27,22 @@ export class APIScoreController {
   constructor(
     private readonly apiScoreService: ApiScoreService,
     private readonly bankCoreProvider: BankCoreProvider,
-  ) { }
+  ) {}
+
+  @UseGuards(ApiKeyGuard)
+  @Get('getTransfers/:nationalCode')
+  getTransferScore(
+    @Param(
+      'nationalCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    nationalCode: number,
+  ) {
+    return this.apiScoreService.getTransferScore(nationalCode);
+  }
 
   @UseGuards(ApiKeyGuard)
   @Get('getTransfersFrom')
@@ -66,6 +81,21 @@ export class APIScoreController {
     referenceCode: number,
   ) {
     return this.apiScoreService.getTransferByReferenceCode(referenceCode);
+  }
+
+  @UseGuards(ApiKeyGuard)
+  @Get('getUsedScoreByNationalCode/:nationalCode')
+  getUsedScoreByNationalCode(
+    @Param(
+      'nationalCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    nationalCode: number,
+  ) {
+    return this.apiScoreService.getUsedScoreByNationalCode(nationalCode);
   }
 
   @UseGuards(ApiKeyGuard)
@@ -116,7 +146,7 @@ export class APIScoreController {
       score,
       ip,
       transferScoreDto.referenceCode ?? null,
-      transferScoreDto.description
+      transferScoreDto.description,
     );
   }
 
@@ -169,14 +199,10 @@ export class APIScoreController {
   @UseGuards(ApiKeyGuard)
   @Post('reverse-transfer')
   @HttpCode(200)
-  async reverseTransfer(
-    @Body() reverseTransferDto: ReverseTransferDto,
-  ) {
+  async reverseTransfer(@Body() reverseTransferDto: ReverseTransferDto) {
     return this.apiScoreService.reverseTransfer(
       reverseTransferDto.referenceCode,
       reverseTransferDto.reverseScore,
     );
   }
-
-
 }

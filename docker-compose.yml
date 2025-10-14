@@ -20,7 +20,7 @@ services:
       - ./score-back/.env.prod  # Only load production env file
 
   score-front:
-    image: score-front:1.0.17
+    image: score-front:1.0.15
     build:
       context: ./score-front
       dockerfile: Dockerfile

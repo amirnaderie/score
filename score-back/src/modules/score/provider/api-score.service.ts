@@ -292,6 +292,82 @@ export class ApiScoreService {
     );
   }
 
+  async getTransferScore(nationalCode: number) {
+    const where: any = {};
+    if (nationalCode) {
+      where.nationalCode = nationalCode;
+    }
+
+    const coresRec =
+      Object.keys(where).length > 0
+        ? await this.scoreRepository.find({ where })
+        : await this.scoreRepository.find();
+
+    if (!coresRec) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'score.service',
+          method: 'getTransferScore',
+          message: `The nationalCode:${nationalCode}  is not found`,
+          requestBody: JSON.stringify({
+            nationalCode,
+          }),
+          stack: '',
+        }),
+      );
+
+      throw new NotFoundException({
+        data: [],
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+    }
+    const TransferScoreFromRecs = await this.transferScoreRepository.find({
+      where: {
+        fromScore: { id: In(coresRec.map((c) => c.id)) },
+      },
+      relations: ['fromScore', 'toScore'],
+    });
+
+    const dataFrom = TransferScoreFromRecs.map((ts) => ({
+      score: ts.score,
+      fromAccountNumber: ts.fromScore.accountNumber,
+      fromNationalCode: ts.fromScore.nationalCode,
+      toAccountNumber: ts.toScore.accountNumber,
+      toNationalCode: ts.toScore.nationalCode,
+      referenceCode: ts.referenceCode,
+      createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
+      reversedAt:
+        ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
+    }));
+
+    const TransferScoreToRecs = await this.transferScoreRepository.find({
+      where: {
+        toScore: { id: In(coresRec.map((c) => c.id)) },
+      },
+      relations: ['fromScore', 'toScore'],
+    });
+
+    const dataTo = TransferScoreToRecs.map((ts) => ({
+      score: ts.score,
+      fromAccountNumber: ts.fromScore.accountNumber,
+      fromNationalCode: ts.fromScore.nationalCode,
+      toAccountNumber: ts.toScore.accountNumber,
+      toNationalCode: ts.toScore.nationalCode,
+      referenceCode: ts.referenceCode,
+      createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
+      reversedAt:
+        ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
+    }));
+    return {
+      data: [...dataFrom, ...dataTo],
+      message: ErrorMessages.SUCCESSFULL,
+      statusCode: 200,
+    };
+  }
   async getTransferScoreFrom(
     fromNationalCode: number,
     fromAccountNumber: number,
@@ -352,7 +428,8 @@ export class ApiScoreService {
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
       createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
-      reversed_at:ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
+      reversedAt:
+        ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
     }));
     return {
       data,
@@ -411,7 +488,7 @@ export class ApiScoreService {
       toNationalCode: ts.toScore.nationalCode,
       referenceCode: ts.referenceCode,
       createdAt: moment(ts.createdAt).format('jYYYY/jMM/jDD'),
-      reversed_at:
+      reversedAt:
         ts.reversedAt && moment(ts.reversedAt).format('jYYYY/jMM/jDD'),
     }));
     return {
@@ -450,6 +527,38 @@ export class ApiScoreService {
       referenceCode: TransferScoreRec[0].referenceCode,
       createdAt: moment(TransferScoreRec[0].createdAt).format('jYYYY/jMM/jDD'),
     };
+    return {
+      data,
+      message: ErrorMessages.SUCCESSFULL,
+      statusCode: 200,
+    };
+  }
+  async getUsedScoreByNationalCode(nationalCode: number) {
+    // Query UsedScore rows where related Score.nationalCode matches
+    const usedScoreRec = await this.UsedScoreRepository
+      .createQueryBuilder('usedScore')
+      .leftJoinAndSelect('usedScore.usedScore', 'score')
+      .where('score.nationalCode = :nationalCode', { nationalCode })
+      .getMany();
+
+    if (!usedScoreRec || usedScoreRec.length === 0)
+      throw new NotFoundException({
+        data: [],
+        message: ErrorMessages.NOT_FOUND,
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+      });
+
+    const data = usedScoreRec.map((item) => ({
+      accountNumber: item.usedScore?.accountNumber,
+      nationalCode: item.usedScore?.nationalCode,
+      score: item.score,
+      referenceCode: item.referenceCode,
+      createdAt: item.createdAt ? moment(item.createdAt).format('jYYYY/jMM/jDD') : null,
+      updatedAt: item.updatedAt ? moment(item.updatedAt).format('jYYYY/jMM/jDD') : null,
+      status: item.status,
+    }));
+
     return {
       data,
       message: ErrorMessages.SUCCESSFULL,

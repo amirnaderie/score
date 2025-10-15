@@ -97,11 +97,17 @@ const Sidebar: FC<Props> = (props) => {
           roles: ["score.admin"],
         },
         {
-          label: "تسهیلات در حال اقدام",
-          key: "report/facilities-in-progress",
-          isOpen: false,
-          ...MENU_ROLES.score,
-        },
+        label: "تسهیلات در حال اقدام",
+        key: "report/facilities-in-progress",
+        isOpen: false,
+        ...MENU_ROLES.score,
+      },
+      {
+        label: "امتیازهای استفاده شده",
+        key: "report/used-scores",
+        isOpen: false,
+        roles: ["score.admin", "score.confirm"],
+      },
       ],
     },
     // Add more menu items with roles as needed

@@ -214,6 +214,47 @@ export class FrontScoreController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.admin', 'score.confirm')
+  @Get('used-scores/by-national-code/:nationalCode')
+  async getUsedScoresByNationalCode(
+    @Param(
+      'nationalCode',
+      new ParseIntPipe({
+        exceptionFactory: (error) =>
+          new BadRequestException(ErrorMessages.VALIDATE_INFO_FAILED),
+      }),
+    )
+    nationalCode: number,
+    @Query('page') page: string,
+    @Query('limit') limit: string,
+  ) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 10;
+    return this.frontScoreService.getUsedScoresByNationalCode(nationalCode, pageNum, limitNum);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.admin', 'score.confirm')
+  @Patch('used-scores/:id')
+  async updateUsedScore(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('score') score: number,
+    @GetUser() user: User,
+  ) {
+    return this.frontScoreService.updateUsedScore(id, score, user);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('score.admin', 'score.confirm')
+  @Delete('used-scores/:id')
+  async deleteUsedScore(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: User,
+  ) {
+    return this.frontScoreService.deleteUsedScore(id, user);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.confirm', 'score.branch', 'score.view', 'score.admin')
   @Get('transfers/all')
   async getAllTransfersPaginated(@Query() query: PaginatedTransferDto) {

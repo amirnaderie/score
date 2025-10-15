@@ -49,7 +49,7 @@ export class FrontScoreService {
     private readonly configService: ConfigService,
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+  ) { }
 
   public async findByNationalCodeForFront(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -140,7 +140,7 @@ export class FrontScoreService {
         const fullNameRet =
           await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
         fullName = fullNameRet.name;
-      } catch {}
+      } catch { }
       return {
         data: {
           scoresRec,
@@ -261,7 +261,7 @@ export class FrontScoreService {
         fromAccountNumber,
       ]);
     } catch (error) {
-      if ( error.status === 404) {
+      if (error.status === 404) {
         handelError(
           error,
           this.eventEmitter,
@@ -843,7 +843,7 @@ export class FrontScoreService {
         score.score = updateScoreDto.score;
       }
       const date = new Date(score.updatedAt);
-      const beforUpdatedAt = date.toLocaleDateString('sv-SE');
+      const beforUpdatedAt = moment(date).format('jYYYY/jMM/jDD HH:mm:ss');
       if (updateScoreDto.updatedAt !== undefined) {
         score.updatedAt = new Date(updateScoreDto.updatedAt);
       }
@@ -856,7 +856,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'updateScore',
-          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${beforScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter:${updateScoreDto.score}, afterUpdatedAt: ${updateScoreDto.updatedAt} by personalCode:${user.userName}`,
+          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${beforScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter:${updateScoreDto.score}, by personalCode:${user.userName}`,
           requestBody: JSON.stringify({ id, updateScoreDto }),
           stack: '',
         }),
@@ -1047,6 +1047,189 @@ export class FrontScoreService {
         'front-score.service',
         'getFacilitiesInProgress',
         { page, limit },
+      );
+    }
+  }
+
+  public async getUsedScoresByNationalCode(
+    nationalCode: number,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Query UsedScore rows where related Score.nationalCode matches
+      const queryBuilder = this.usedScoreRepository
+        .createQueryBuilder('usedScore')
+        .leftJoinAndSelect('usedScore.usedScore', 'score')
+        .leftJoin(
+          UsedScoreDescription,
+          'usd',
+          'usd.referenceCode = usedScore.referenceCode',
+        )
+        .addSelect('usd.description', 'description')
+        .where('score.nationalCode = :nationalCode', { nationalCode })
+        .orderBy('usedScore.createdAt', 'DESC');
+
+      // Get total count
+      const total = await queryBuilder.getCount();
+
+      // Get paginated results
+      const usedScores = await queryBuilder
+        .skip(skip)
+        .take(limit)
+        .getRawAndEntities();
+
+      // Format results
+      const formattedResults = usedScores.entities.map((usedScore) => ({
+        id: usedScore.id,
+        // nationalCode: usedScore.usedScore.nationalCode,
+        accountNumber: usedScore.usedScore.accountNumber,
+        score: usedScore.score,
+        referenceCode: usedScore.referenceCode,
+        createdAt: usedScore.createdAt.toISOString(),
+        createdAtShamsi: moment(usedScore.createdAt).format('jYYYY/jMM/jDD'),
+        branchCode: usedScore.branchCode,
+        // status: usedScore.status,
+        // description: usedScore.description || '',
+      }));
+
+      // this.eventEmitter.emit(
+      //   'logEvent',
+      //   new LogEvent({
+      //     logTypes: logTypes.INFO,
+      //     fileName: 'front-score.service',
+      //     method: 'getUsedScoresByNationalCode',
+      //     message: `Used scores retrieved successfully for nationalCode: ${nationalCode}, total: ${total}`,
+      //     requestBody: JSON.stringify({ nationalCode, page, limit }),
+      //     stack: '',
+      //   }),
+      // );
+
+      return {
+        data: {
+          data: formattedResults,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'getUsedScoresByNationalCode',
+        { nationalCode, page, limit },
+      );
+    }
+  }
+
+  public async updateUsedScore(
+    id: number,
+    score: number,
+    user: User,
+  ) {
+    try {
+      const usedScore = await this.usedScoreRepository.findOne({
+        where: { id },
+        relations: ['usedScore'],
+      });
+
+      if (!usedScore) {
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
+      }
+
+      const beforeScore = usedScore.score;
+      
+      const date = new Date(usedScore.updatedAt);
+      const beforUpdatedAt = moment(date).format('jYYYY/jMM/jDD HH:mm:ss');
+
+      usedScore.score = score;
+      usedScore.updatedAt = new Date();
+
+      await this.usedScoreRepository.save(usedScore);
+
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'updateUsedScore',
+          message: `Used score updated successfully for id: ${id}, nationalCode: ${usedScore.usedScore.nationalCode}, accountNumber: ${usedScore.usedScore.accountNumber}, scoreBefore: ${beforeScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter: ${score}, by personalCode: ${user.userName}`,
+          requestBody: JSON.stringify({ id, score }),
+          stack: '',
+        }),
+      );
+
+      return {
+        data: usedScore,
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'updateUsedScore',
+        { id, score },
+      );
+    }
+  }
+
+  public async deleteUsedScore(
+    id: number,
+    user: User,
+  ) {
+    try {
+      const usedScore = await this.usedScoreRepository.findOne({
+        where: { id },
+        relations: ['usedScore'],
+      });
+
+      if (!usedScore) {
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
+      }
+
+      await this.usedScoreRepository.remove(usedScore);
+
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'front-score.service',
+          method: 'deleteUsedScore',
+          message: `Used score deleted successfully for id: ${id}, nationalCode: ${usedScore.usedScore.nationalCode}, accountNumber: ${usedScore.usedScore.accountNumber}, score: ${usedScore.score}, referenceCode: ${usedScore.referenceCode} by personalCode: ${user.userName}`,
+          requestBody: JSON.stringify({ id }),
+          stack: '',
+        }),
+      );
+
+      return {
+        message: ErrorMessages.SUCCESSFULL,
+        statusCode: 200,
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'front-score.service',
+        'deleteUsedScore',
+        { id },
       );
     }
   }

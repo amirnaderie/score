@@ -184,7 +184,7 @@ export class FrontScoreService {
         fromAccountNumber,
       ]);
     } catch (error) {
-      if (error.status === 400 || error.status === 404) {
+      if (error.status === 404) {
         handelError(
           error,
           this.eventEmitter,
@@ -261,7 +261,7 @@ export class FrontScoreService {
         fromAccountNumber,
       ]);
     } catch (error) {
-      if (error.status === 400 || error.status === 404) {
+      if ( error.status === 404) {
         handelError(
           error,
           this.eventEmitter,

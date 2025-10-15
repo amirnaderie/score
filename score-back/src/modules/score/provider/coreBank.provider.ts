@@ -219,10 +219,10 @@ export class BankCoreProvider {
               stack: '',
             }),
           );
-          throw new BadRequestException({
+          throw new NotFoundException({
             message: ErrorMessages.NOT_FOUND,
             statusCode: HttpStatus.BAD_REQUEST,
-            error: 'Bad Request',
+            error: 'Not Found',
           });
         }
         if (foundDeposit.depositStatus === 'CLOSE') {

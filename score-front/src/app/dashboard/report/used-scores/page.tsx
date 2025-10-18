@@ -9,11 +9,11 @@ import {
   UsedScoreData,
   PaginatedUsedScoresResponse,
 } from "./api/apis";
-import { SearchForm } from "./components/SearchForm";
-import { UsedScoresTable } from "./components/UsedScoresTable";
-import { Pagination } from "./components/Pagination";
-import { UpdateScoreModal } from "./components/UpdateScoreModal";
-import { DeleteConfirmModal } from "./components/DeleteConfirmModal";
+import { SearchForm } from "./_components/SearchForm";
+import { UsedScoresTable } from "./_components/UsedScoresTable";
+import { Pagination } from "./_components/Pagination";
+import { UpdateScoreModal } from "./_components/UpdateScoreModal";
+import { DeleteConfirmModal } from "./_components/DeleteConfirmModal";
 
 const fetcher = async (url: string) => {
   try {
@@ -22,7 +22,7 @@ const fetcher = async (url: string) => {
     const pathParts = urlObj.pathname.split("/");
     const nationalCode = pathParts[pathParts.length - 1];
     const page = urlObj.searchParams.get("page") || "1";
-    const limit = urlObj.searchParams.get("limit") || "10";
+    const limit = urlObj.searchParams.get("limit") || "8";
 
     const result = await usedScoresApi.getUsedScoresByNationalCode({
       nationalCode,
@@ -41,7 +41,7 @@ export default function UsedScoresPage() {
   const [searchParams, setSearchParams] = useState<UsedScoresSearchParams>({
     nationalCode: "",
     page: 1,
-    limit: 10,
+    limit: 8,
   });
 
   const [updateModalData, setUpdateModalData] = useState<{
@@ -153,32 +153,28 @@ export default function UsedScoresPage() {
   // }, [data]);
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-lg">
-        
-        <div className="p-6">
-          <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+    <div className="container mx-auto p-2">
 
-          {shouldFetch && (
-            <>
-              <UsedScoresTable
-                data={data?.data || []}
-                isLoading={isLoading}
-                onUpdateScore={handleUpdateScore}
-                onDeleteScore={handleDeleteScore}
-              />
+      <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
-              {data && data.totalPages > 1 && (
-                <Pagination
-                  currentPage={searchParams.page || 1}
-                  totalPages={data.totalPages}
-                  onPageChange={handlePageChange}
-                />
-              )}
-            </>
+      {shouldFetch && (
+        <>
+          <UsedScoresTable
+            data={data?.data || []}
+            isLoading={isLoading}
+            onUpdateScore={handleUpdateScore}
+            onDeleteScore={handleDeleteScore}
+          />
+
+          {data && data.totalPages > 1 && (
+            <Pagination
+              currentPage={searchParams.page || 1}
+              totalPages={data.totalPages}
+              onPageChange={handlePageChange}
+            />
           )}
-        </div>
-      </div>
+        </>
+      )}
 
       <UpdateScoreModal
         isOpen={updateModalData.isOpen}

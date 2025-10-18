@@ -94,20 +94,26 @@ export default function TransferDashboard() {
     <div className="container mx-auto p-2">
       <SearchForm onSearch={handleSearch} loading={loading} />
 
-      <TransferTable
-        transfers={transfers}
-        loading={loading}
-        onSort={handleSort}
-        sortBy={searchParams?.sortBy || "date"}
-        sortOrder={searchParams?.sortOrder || "DESC"}
-        onReverseSuccess={handleReverseSuccess}
-      />
+      {searchParams && (
+        <>
+          <TransferTable
+            transfers={transfers}
+            loading={loading}
+            onSort={handleSort}
+            sortBy={searchParams?.sortBy || "date"}
+            sortOrder={searchParams?.sortOrder || "DESC"}
+            onReverseSuccess={handleReverseSuccess}
+          />
 
-      <Pagination
-        currentPage={searchParams?.page || 1}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-      />
+          {transfers.length > 0 && (
+            <Pagination
+              currentPage={searchParams?.page || 1}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

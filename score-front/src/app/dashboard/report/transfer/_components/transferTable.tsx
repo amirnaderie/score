@@ -84,9 +84,8 @@ export default function TransferTable({
 
   if (transfers.length === 0) {
     return (
-      <div className="text-center py-4 w-full flex justify-center h-full items-center">
-        {" "}
-        لیست خالی است{" "}
+      <div className="text-center py-12">
+        <p className="text-gray-400 mt-2">لیست خالی است</p>
       </div>
     );
   }

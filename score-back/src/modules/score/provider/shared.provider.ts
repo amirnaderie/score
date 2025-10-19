@@ -89,7 +89,7 @@ export class SharedProvider {
     }
   }
 
-  async consumeScore(
+  async useScore(
     nationalCode: number,
     accountNumber: number,
     score: number,

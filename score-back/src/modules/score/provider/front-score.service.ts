@@ -384,7 +384,7 @@ export class FrontScoreService {
     //   [scoreRec[0].nationalCode, scoreRec[0].accountNumber],
     // );
 
-    return this.sharedProvider.consumeScore(
+    return this.sharedProvider.useScore(
       Number(createUseScoreDto.nationalCode),
       Number(createUseScoreDto.accountNumber),
       createUseScoreDto.score,

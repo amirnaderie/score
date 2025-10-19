@@ -282,7 +282,7 @@ export class ApiScoreService {
     //   });
     // }
 
-    return this.sharedProvider.consumeScore(
+    return this.sharedProvider.useScore(
       nationalCode,
       accountNumber,
       score,

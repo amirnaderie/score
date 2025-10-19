@@ -71,16 +71,13 @@ export default function UsedScoresPage() {
       {
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
+        revalidateIfStale: false,
+        dedupingInterval: 30000, // 30 seconds deduping
+        focusThrottleInterval: 60000, // 1 minute focus throttle
+        errorRetryInterval: 10000, // 10 seconds retry interval
+        keepPreviousData: true, // Keep previous data while fetching
       }
     );
-
-  const handleSearch = useCallback((nationalCode: string) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      nationalCode,
-      page: 1,
-    }));
-  }, []);
 
   const handlePageChange = useCallback((page: number) => {
     setSearchParams((prev) => ({
@@ -88,6 +85,22 @@ export default function UsedScoresPage() {
       page,
     }));
   }, []);
+
+  // Debounce search to prevent too many requests
+  const debouncedSearch = useCallback(
+    debounce((nationalCode: string) => {
+      setSearchParams((prev) => ({
+        ...prev,
+        nationalCode,
+        page: 1,
+      }));
+    }, 500),
+    []
+  );
+
+  const handleSearch = useCallback((nationalCode: string) => {
+    debouncedSearch(nationalCode);
+  }, [debouncedSearch]);
 
   const handleUpdateScore = useCallback((usedScore: UsedScoreData) => {
     setUpdateModalData({
@@ -108,8 +121,9 @@ export default function UsedScoresPage() {
 
     try {
       await usedScoresApi.updateUsedScore(
-        updateModalData.usedScore.id,
-        newScore
+        updateModalData.usedScore.referenceCode,
+        newScore,
+        searchParams.nationalCode
       );
       toast.success("امتیاز با موفقیت بروزرسانی شد");
       mutate();
@@ -125,7 +139,10 @@ export default function UsedScoresPage() {
     if (!deleteModalData.usedScore) return;
 
     try {
-      await usedScoresApi.deleteUsedScore(deleteModalData.usedScore.id);
+      await usedScoresApi.deleteUsedScore(
+        deleteModalData.usedScore.referenceCode,
+        searchParams.nationalCode
+      );
       toast.success("امتیاز با موفقیت حذف شد");
       mutate();
       setDeleteModalData({ isOpen: false, usedScore: null });
@@ -191,4 +208,17 @@ export default function UsedScoresPage() {
       />
     </div>
   );
+}
+
+// Add this helper function outside the component
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }

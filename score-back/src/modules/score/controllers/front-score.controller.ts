@@ -235,23 +235,25 @@ export class FrontScoreController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.admin', 'score.confirm')
-  @Patch('used-scores/:id')
+  @Patch('used-scores/:referenceCode')
   async updateUsedScore(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('referenceCode', ParseIntPipe) referenceCode: number,
     @Body('score') score: number,
+    @Body('nationalCode') nationalCode: string,
     @GetUser() user: User,
   ) {
-    return this.frontScoreService.updateUsedScore(id, score, user);
+    return this.frontScoreService.updateUsedScore(referenceCode, score, nationalCode, user);
   }
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('score.admin', 'score.confirm')
-  @Delete('used-scores/:id')
+  @Delete('used-scores/:referenceCode')
   async deleteUsedScore(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('referenceCode', ParseIntPipe) referenceCode: number,
+    @Body('nationalCode') nationalCode: string,
     @GetUser() user: User,
   ) {
-    return this.frontScoreService.deleteUsedScore(id, user);
+    return this.frontScoreService.deleteUsedScore(referenceCode, nationalCode, user);
   }
 
   @UseGuards(AuthGuard, RolesGuard)

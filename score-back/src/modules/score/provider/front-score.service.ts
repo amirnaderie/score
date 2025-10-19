@@ -33,6 +33,7 @@ import {
   FacilitiesInProgressDto,
   FacilityInProgressResponseDto,
 } from '../dto/facilities-in-progress.dto';
+import { CorrelationService } from '../../correlation/correlation.service';
 
 @Injectable()
 export class FrontScoreService {
@@ -1059,53 +1060,44 @@ export class FrontScoreService {
     try {
       const skip = (page - 1) * limit;
 
-      // Query UsedScore rows where related Score.nationalCode matches
-      const queryBuilder = this.usedScoreRepository
+      // Optimized query with better indexing and fewer joins
+      const rawResults = await this.usedScoreRepository
         .createQueryBuilder('usedScore')
-        .leftJoinAndSelect('usedScore.usedScore', 'score')
-        .leftJoin(
-          UsedScoreDescription,
-          'usd',
-          'usd.referenceCode = usedScore.referenceCode',
-        )
-        .addSelect('usd.description', 'description')
+        .innerJoin('usedScore.usedScore', 'score')
         .where('score.nationalCode = :nationalCode', { nationalCode })
-        .orderBy('usedScore.createdAt', 'DESC');
+        .select([
+          'usedScore.referenceCode as referenceCode',
+          'MAX(score.accountNumber) as accountNumber',
+          'SUM(usedScore.score) as totalScore',
+          'MAX(usedScore.updatedAt) as latestUpdatedAt',
+          'MAX(usedScore.branchCode) as branchCode'
+        ])
+        .groupBy('usedScore.referenceCode')
+        .orderBy('latestUpdatedAt', 'DESC')
+        .offset(skip)
+        .limit(limit)
+        .getRawMany();
 
-      // Get total count
-      const total = await queryBuilder.getCount();
+      // Get total count with a more efficient query
+      const totalCountResult = await this.usedScoreRepository
+        .createQueryBuilder('usedScore')
+        .innerJoin('usedScore.usedScore', 'score')
+        .where('score.nationalCode = :nationalCode', { nationalCode })
+        .select('COUNT(DISTINCT usedScore.referenceCode)', 'count')
+        .getRawOne();
 
-      // Get paginated results
-      const usedScores = await queryBuilder
-        .skip(skip)
-        .take(limit)
-        .getRawAndEntities();
+      const total = parseInt(totalCountResult.count) || 0;
 
       // Format results
-      const formattedResults = usedScores.entities.map((usedScore) => ({
-        id: usedScore.id,
-        // nationalCode: usedScore.usedScore.nationalCode,
-        accountNumber: usedScore.usedScore.accountNumber,
-        score: usedScore.score,
-        referenceCode: usedScore.referenceCode,
-        createdAt: usedScore.createdAt.toISOString(),
-        createdAtShamsi: moment(usedScore.createdAt).format('jYYYY/jMM/jDD'),
-        branchCode: usedScore.branchCode,
-        // status: usedScore.status,
-        // description: usedScore.description || '',
+      const formattedResults = rawResults.map((result) => ({
+        id: parseInt(result.referenceCode),
+        accountNumber: parseInt(result.accountNumber),
+        score: parseFloat(result.totalScore),
+        referenceCode: parseInt(result.referenceCode),
+        createdAt: new Date(result.latestUpdatedAt).toISOString(),
+        createdAtShamsi: moment(result.latestUpdatedAt).format('jYYYY/jMM/jDD'),
+        branchCode: parseInt(result.branchCode),
       }));
-
-      // this.eventEmitter.emit(
-      //   'logEvent',
-      //   new LogEvent({
-      //     logTypes: logTypes.INFO,
-      //     fileName: 'front-score.service',
-      //     method: 'getUsedScoresByNationalCode',
-      //     message: `Used scores retrieved successfully for nationalCode: ${nationalCode}, total: ${total}`,
-      //     requestBody: JSON.stringify({ nationalCode, page, limit }),
-      //     stack: '',
-      //   }),
-      // );
 
       return {
         data: {
@@ -1130,74 +1122,71 @@ export class FrontScoreService {
   }
 
   public async updateUsedScore(
-    id: number,
+    referenceCode: number,
     score: number,
+    nationalCode: string,
     user: User,
   ) {
     try {
-      const usedScore = await this.usedScoreRepository.findOne({
-        where: { id },
-        relations: ['usedScore'],
-      });
+      // Get correlation ID from the request context
+      // The correlationId is set by the CorrelationMiddleware
+      const correlationId = CorrelationService.getCorrelationId();
+      const personalCode = parseInt(user.userName); // Use userName as personalCode
 
-      if (!usedScore) {
-        throw new NotFoundException({
-          message: ErrorMessages.NOT_FOUND,
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'Not Found',
-        });
-      }
+      // Execute the reverseUsed stored procedure
+      // Parameters: referenceCode, reverseScore (new score), correlationId, personalCode
+      await this.dataSource.query(
+        'EXEC reverseUsed @referenceCode=@0, @reverseScore=@1, @correlationId=@2, @personalCode=@3, @nationalCode=@4',
+        [referenceCode, score, correlationId, personalCode, nationalCode]
+      );
 
-      const beforeScore = usedScore.score;
-      
-      const date = new Date(usedScore.updatedAt);
-      const beforUpdatedAt = moment(date).format('jYYYY/jMM/jDD HH:mm:ss');
-
-      usedScore.score = score;
-      usedScore.updatedAt = new Date();
-
-      await this.usedScoreRepository.save(usedScore);
-
-
+      // If we reach this point, the stored procedure executed successfully
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'updateUsedScore',
-          message: `Used score updated successfully for id: ${id}, nationalCode: ${usedScore.usedScore.nationalCode}, accountNumber: ${usedScore.usedScore.accountNumber}, scoreBefore: ${beforeScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter: ${score}, by personalCode: ${user.userName}`,
-          requestBody: JSON.stringify({ id, score }),
+          message: `Used score updated successfully via reverseUsed SP. ReferenceCode: ${referenceCode}, New Score: ${score}, CorrelationId: ${correlationId}, NationalCode: ${nationalCode} by personalCode:${personalCode}`,
+          requestBody: JSON.stringify({ referenceCode, score, nationalCode, user, correlationId, personalCode }),
           stack: '',
         }),
       );
 
       return {
-        data: usedScore,
         message: ErrorMessages.SUCCESSFULL,
         statusCode: 200,
       };
     } catch (error) {
-      handelError(
-        error,
-        this.eventEmitter,
-        'front-score.service',
-        'updateUsedScore',
-        { id, score },
-      );
+      // If the stored procedure fails, it will throw an error which we catch here
+      handelError(error, this.eventEmitter, 'front-score.service', 'updateUsedScore', {
+        referenceCode,
+        score,
+        nationalCode,
+        user,
+      });
     }
   }
 
   public async deleteUsedScore(
-    id: number,
+    referenceCode: number,
+    nationalCode: string,
     user: User,
   ) {
     try {
-      const usedScore = await this.usedScoreRepository.findOne({
-        where: { id },
+      // For delete operation, we might want to implement a different stored procedure
+      // or use the same approach as update. For now, I'll keep the existing logic
+      // but add the nationalCode to the logs
+
+      const personalCode = parseInt(user.userName); // Use userName as personalCode
+
+      // Find all used scores with the same referenceCode
+      const usedScores = await this.usedScoreRepository.find({
+        where: { referenceCode },
         relations: ['usedScore'],
       });
 
-      if (!usedScore) {
+      if (!usedScores || usedScores.length === 0) {
         throw new NotFoundException({
           message: ErrorMessages.NOT_FOUND,
           statusCode: HttpStatus.NOT_FOUND,
@@ -1205,7 +1194,8 @@ export class FrontScoreService {
         });
       }
 
-      await this.usedScoreRepository.remove(usedScore);
+      // Delete all records with the same referenceCode
+      await this.usedScoreRepository.remove(usedScores);
 
       this.eventEmitter.emit(
         'logEvent',
@@ -1213,8 +1203,8 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'deleteUsedScore',
-          message: `Used score deleted successfully for id: ${id}, nationalCode: ${usedScore.usedScore.nationalCode}, accountNumber: ${usedScore.usedScore.accountNumber}, score: ${usedScore.score}, referenceCode: ${usedScore.referenceCode} by personalCode: ${user.userName}`,
-          requestBody: JSON.stringify({ id }),
+          message: `Used scores deleted successfully. ReferenceCode: ${referenceCode}, Count: ${usedScores.length}, NationalCode: ${nationalCode} by personalCode:${personalCode}`,
+          requestBody: JSON.stringify({ referenceCode, nationalCode, user }),
           stack: '',
         }),
       );
@@ -1224,13 +1214,11 @@ export class FrontScoreService {
         statusCode: 200,
       };
     } catch (error) {
-      handelError(
-        error,
-        this.eventEmitter,
-        'front-score.service',
-        'deleteUsedScore',
-        { id },
-      );
+      handelError(error, this.eventEmitter, 'front-score.service', 'deleteUsedScore', {
+        referenceCode,
+        nationalCode,
+        user,
+      });
     }
   }
 }

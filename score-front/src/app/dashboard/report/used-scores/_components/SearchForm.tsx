@@ -72,7 +72,7 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
           <button
             type="submit"
             disabled={isLoading || !nationalCode || !!nationalCodeError}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full flex justify-center items-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
              {isLoading ? (
                 <SpinnerSVG className="h-6 w-4 animate-spin text-white" />

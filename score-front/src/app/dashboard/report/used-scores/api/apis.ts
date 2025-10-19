@@ -30,7 +30,7 @@ export const usedScoresApi = {
   getUsedScoresByNationalCode: async (params: UsedScoresSearchParams): Promise<PaginatedUsedScoresResponse> => {
     const queryString = new URLSearchParams({
       page: params.page?.toString() || '1',
-      limit: params.limit?.toString() || '10',
+      limit: params.limit?.toString() || '8',
     }).toString();
 
     const response = await fetchWithAuthClient(
@@ -48,15 +48,15 @@ export const usedScoresApi = {
     return result.data; // Return the data object which contains the paginated response
   },
 
-  updateUsedScore: async (id: number, score: number): Promise<any> => {
+  updateUsedScore: async (referenceCode: number, score: number, nationalCode: string): Promise<any> => {
     const response = await fetchWithAuthClient(
-      `${API_BASE_URL}/front/score/used-scores/${id}`,
+      `${API_BASE_URL}/front/score/used-scores/${referenceCode}`,
       {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ score }),
+        body: JSON.stringify({ score, nationalCode }),
         credentials: "include",
       }
     );
@@ -68,14 +68,15 @@ export const usedScoresApi = {
     return response.json();
   },
 
-  deleteUsedScore: async (id: number): Promise<any> => {
+  deleteUsedScore: async (referenceCode: number, nationalCode: string): Promise<any> => {
     const response = await fetchWithAuthClient(
-      `${API_BASE_URL}/front/score/used-scores/${id}`,
+      `${API_BASE_URL}/front/score/used-scores/${referenceCode}`,
       {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ nationalCode }),
         credentials: "include",
       }
     );

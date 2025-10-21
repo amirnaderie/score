@@ -248,7 +248,7 @@ export class AuthService {
     try {
       const AFRA_URL = this.configService.get<string>('AFRA_URL');
       const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
-      const retVal = await fetch(`${AFRA_URL}/findByCode`, {
+      const retVal = await fetch(`${AFRA_URL}/personnel/findByCode`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

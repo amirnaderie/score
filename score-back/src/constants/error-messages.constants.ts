@@ -19,4 +19,7 @@ export const ErrorMessages = {
   USER_NOT_FOUND: 'اطلاعات کاربر در سامانه افرا یافت نشد',
   COREBANKING_ERROR: 'خطا در اتصال به کر بانکینگ',
   INVALID_TYPE: 'نوع حساب معتبر نیست',
+  DIFERENT_DEPOSITTYPE: 'نوع حساب ها تطابق ندارند',
+  DIFERENT_PROVINCE: 'استانهای حساب ها تطابق ندارند',
+  AFRA_ERROR: 'خطا در اتصال به سامانه ساختار سازمانی'
 };

@@ -46,6 +46,7 @@ export interface TransferRequest {
 export interface EstelamResponse {
   fromName: string;
   toName: string;
+  isDepositTypeIdentical: boolean;
 }
 
 export const transferApi = {

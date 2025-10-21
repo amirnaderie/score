@@ -35,7 +35,7 @@ interface ScoreRow {
   transferableScore: number;
   depositType: string;
   usedScore: UsedScore[];
-  updated_at: string;
+  updatedAt: string;
 }
 
 interface ApiResponse {
@@ -68,7 +68,7 @@ export default function Home() {
   const [modalContent, setModalContent] = useState({
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
   // const [saveMsg, setSaveMsg] = useState<{ [key: string]: string }>({});
   const userData: User | null = UseStore((state) => state.userData);
@@ -330,6 +330,9 @@ export default function Home() {
                 <span className=" px-3 py-2 w-[15%] text-center">
                   امتیاز قابل انتقال
                 </span>
+                <span className=" px-3 py-2 w-[15%] text-center">
+                  آخرین بروز رسانی
+                </span>
                 <span className=" px-3 py-2 w-[20%] text-center">
                   میزان استفاده
                 </span>
@@ -338,17 +341,16 @@ export default function Home() {
                   "score.confirm",
                   "score.branch",
                 ]) && (
-                  <span className=" px-3 py-2 w-[10%] text-center">عملیات</span>
-                )}
+                    <span className=" px-3 py-2 w-[10%] text-center">عملیات</span>
+                  )}
               </div>
 
               <div className="w-full max-h-[150px] overflow-auto pb-5">
                 {data.map((row, idx) => (
                   <div
                     key={row.accountNumber}
-                    className={`cursor-pointer w-full flex justify-start items-center ${
-                      selectedIndex === idx ? "bg-blue-50" : ""
-                    }`}
+                    className={`cursor-pointer w-full flex justify-start items-center ${selectedIndex === idx ? "bg-blue-50" : ""
+                      }`}
                     onClick={() => setSelectedIndex(idx)}
                   >
                     <span className=" px-3 py-2 w-[20%] text-center">
@@ -359,6 +361,9 @@ export default function Home() {
                     </span>
                     <span className=" px-3 py-2  w-[15%] text-center">
                       {Number(row.transferableScore).toLocaleString()}
+                    </span>
+                    <span className=" px-3 py-2  w-[15%] text-center">
+                      {row.updatedAt}
                     </span>
                     <span className=" py-2 flex justify-center w-[20%]">
                       <input
@@ -382,11 +387,10 @@ export default function Home() {
                     <span className=" py-2 flex justify-center w-[20%]">
                       <input
                         type="text"
-                        className={`border rounded px-2 py-2 w-[90%] text-xs bg-white ${
-                          descriptionErrors[row.accountNumber]
+                        className={`border rounded px-2 py-2 w-[90%] text-xs bg-white ${descriptionErrors[row.accountNumber]
                             ? "border-red-500"
                             : ""
-                        }`}
+                          }`}
                         value={scoreDescriptions[row.accountNumber] || ""}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -413,28 +417,28 @@ export default function Home() {
                       "score.confirm",
                       "score.branch",
                     ]) && (
-                      <span className=" px-3 py-2 w-[10%] text-sm">
-                        <button
-                          className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                          disabled={
-                            saving[row.accountNumber] ||
-                            !consumeScores[row.accountNumber] ||
-                            Number(consumeScores[row.accountNumber]) <= 0 ||
-                            descriptionErrors[row.accountNumber]
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveConsume(row.accountNumber);
-                          }}
-                        >
-                          {saving[row.accountNumber] ? (
-                            <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                          ) : (
-                            "ثبت"
-                          )}
-                        </button>
-                      </span>
-                    )}
+                        <span className=" px-3 py-2 w-[10%] text-sm">
+                          <button
+                            className="bg-green-300 w-full   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                            disabled={
+                              saving[row.accountNumber] ||
+                              !consumeScores[row.accountNumber] ||
+                              Number(consumeScores[row.accountNumber]) <= 0 ||
+                              descriptionErrors[row.accountNumber]
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveConsume(row.accountNumber);
+                            }}
+                          >
+                            {saving[row.accountNumber] ? (
+                              <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                            ) : (
+                              "ثبت"
+                            )}
+                          </button>
+                        </span>
+                      )}
                   </div>
                 ))}
               </div>
@@ -442,8 +446,8 @@ export default function Home() {
           </div>
 
           {selectedIndex !== null &&
-          data[selectedIndex] &&
-          data[selectedIndex].usedScore.length ? (
+            data[selectedIndex] &&
+            data[selectedIndex].usedScore.length ? (
             <div className=" w-full">
               <div className="bg-gray-50 p-4 rounded shadow">
                 <div className="font-semibold mb-2 text-sm">
@@ -476,10 +480,10 @@ export default function Home() {
                         "score.confirm",
                         "score.branch",
                       ]) && (
-                        <span className=" px-2 py-1 w-[20%] text-center">
-                          عملیات
-                        </span>
-                      )}
+                          <span className=" px-2 py-1 w-[20%] text-center">
+                            عملیات
+                          </span>
+                        )}
                     </div>
                     <div className=" max-h-[270px] w-full overflow-y-auto">
                       {data[selectedIndex].usedScore.map((u: UsedScore) => (
@@ -506,49 +510,49 @@ export default function Home() {
                             "score.confirm",
                             "score.branch",
                           ]) && (
-                            <span className=" px-2 py-1 text-center w-[20%] flex justify-between items-center">
-                              {userData &&
-                                userData.branchCode === u.branchCode &&
-                                !u.status && (
-                                  <>
-                                    <button
-                                      className="bg-green-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                                      // disabled={
-                                      //   saving[row.accountNumber] ||
-                                      //   !consumeScores[row.accountNumber]
-                                      // }
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        acceptUse(u.referenceCode!);
-                                      }}
-                                    >
-                                      {saveUse[u.id] ? (
-                                        <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                                      ) : (
-                                        "ثبت نهایی"
-                                      )}
-                                    </button>
-                                    <button
-                                      className="bg-red-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
-                                      // disabled={
-                                      //   saving[row.accountNumber] ||
-                                      //   !consumeScores[row.accountNumber]
-                                      // }
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        cancelUse(u.referenceCode!);
-                                      }}
-                                    >
-                                      {calcleUse[u.id] ? (
-                                        <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
-                                      ) : (
-                                        "لغو"
-                                      )}
-                                    </button>
-                                  </>
-                                )}
-                            </span>
-                          )}
+                              <span className=" px-2 py-1 text-center w-[20%] flex justify-between items-center">
+                                {userData &&
+                                  userData.branchCode === u.branchCode &&
+                                  !u.status && (
+                                    <>
+                                      <button
+                                        className="bg-green-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                        // disabled={
+                                        //   saving[row.accountNumber] ||
+                                        //   !consumeScores[row.accountNumber]
+                                        // }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          acceptUse(u.referenceCode!);
+                                        }}
+                                      >
+                                        {saveUse[u.id] ? (
+                                          <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                                        ) : (
+                                          "ثبت نهایی"
+                                        )}
+                                      </button>
+                                      <button
+                                        className="bg-red-300 w-[45%]   px-3 py-1 rounded disabled:opacity-50 flex justify-center items-center cursor-pointer"
+                                        // disabled={
+                                        //   saving[row.accountNumber] ||
+                                        //   !consumeScores[row.accountNumber]
+                                        // }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          cancelUse(u.referenceCode!);
+                                        }}
+                                      >
+                                        {calcleUse[u.id] ? (
+                                          <SpinnerSVG className="h-6 w-5 animate-spin text-white" />
+                                        ) : (
+                                          "لغو"
+                                        )}
+                                      </button>
+                                    </>
+                                  )}
+                              </span>
+                            )}
                         </div>
                       ))}
                     </div>

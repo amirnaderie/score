@@ -61,4 +61,8 @@ export class UtilityService {
     const { gy, gm, gd } = jalaali.toGregorian(jy, jm, jd);
     return new Date(gy, gm - 1, gd); // JS Date (month is 0-based)
   }
+
+  createBranchCode = (branchCode: string): string => {
+    return ("150" + branchCode.toString().padStart(4, "0"));
+  }
 }

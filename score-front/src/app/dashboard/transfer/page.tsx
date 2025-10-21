@@ -222,11 +222,10 @@ export default function TransferPage() {
                       onInput={(e) => handleInput(e, 11)}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
-                      className={` ${
-                        errors.fromNationalCode
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      className={` ${errors.fromNationalCode
+                        ? "border-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                        } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="کد/شناسه مبدا را وارد کنید"
                       maxLength={11}
                       autoFocus
@@ -249,11 +248,10 @@ export default function TransferPage() {
                       onInput={(e) => handleInput(e, 16)}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
-                      className={` ${
-                        errors.fromAccountNumber
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      className={` ${errors.fromAccountNumber
+                        ? "border-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                        } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="شماره حساب مبدا را وارد کنید"
                       maxLength={16}
                     />
@@ -282,11 +280,10 @@ export default function TransferPage() {
                       onInput={(e) => handleInput(e, 11)}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
-                      className={` ${
-                        errors.toNationalCode
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      className={` ${errors.toNationalCode
+                        ? "border-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                        } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="کد/شناسه مقصد را وارد کنید"
                       maxLength={11}
                     />
@@ -308,11 +305,10 @@ export default function TransferPage() {
                       onInput={(e) => handleInput(e, 16)}
                       onChange={handleInputChange}
                       onBlur={handleBlur}
-                      className={` ${
-                        errors.toAccountNumber
-                          ? "border-red-500"
-                          : "border-gray-300 dark:border-gray-600"
-                      } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
+                      className={` ${errors.toAccountNumber
+                        ? "border-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                        } w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right`}
                       placeholder="شماره حساب مقصد را وارد کنید"
                       maxLength={16}
                     />
@@ -430,6 +426,9 @@ export default function TransferPage() {
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
                     {estelamData.toName}
                   </p>
+                </div>
+                <div className="text-Secondary-01 text-xs">
+                  {!estelamData.isDepositTypeIdentical ? "نوع حساب مبدا و مقصد یکسان نیست" : ""}
                 </div>
               </div>
 

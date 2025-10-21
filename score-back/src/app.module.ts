@@ -14,6 +14,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { LogModule } from './modules/log/log.module';
 import { CorrelationModule } from './modules/correlation/correlation.module';
+import { UtilityModule } from './utility/utility.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { CorrelationModule } from './modules/correlation/correlation.module';
     ScoreModule,
     AuthModule,
     LogModule,
-    CorrelationModule, // Add CorrelationModule
+    CorrelationModule,
+    UtilityModule, // Add UtilityModule
   ],
   controllers: [AppController],
   providers: [

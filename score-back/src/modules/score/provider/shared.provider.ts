@@ -3,6 +3,7 @@ import {
   BadRequestException,
   HttpStatus,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -20,6 +21,7 @@ import { TransferScore } from '../entities/transfer-score.entity';
 import { TransferScoreDescription } from '../entities/transfer-score-description.entity';
 import { UsedScoreDescription } from '../entities/used-score-description.entity';
 import { User } from 'src/interfaces/user.interface';
+import { CLIENT_RENEG_LIMIT } from 'tls';
 
 @Injectable()
 export class SharedProvider {
@@ -534,11 +536,55 @@ export class SharedProvider {
       handelError(
         error,
         this.eventEmitter,
-        'front-score.service',
+        'shared.provider',
         'reverseTransfer',
         { referenceCode, reverseScore, personalCode: `${user ? user.userName : 'api'}` },
       );
     }
   }
   // After saving transfer scores, save description if provided
+
+  async getBranchData(code: string) {
+    try {
+      const AFRA_URL = this.configService.get<string>('AFRA_URL');
+      const AFRA_TOKEN = this.configService.get<string>('AFRA_TOKEN');
+      const retVal = await fetch(`${AFRA_URL}/unit/findByCode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${AFRA_TOKEN}`,
+        },
+        body: JSON.stringify({
+          code: code,
+        }),
+      });
+      let branchdata = await retVal.json();
+      if (!branchdata || !branchdata.province || !branchdata.province.code) {
+        const retVal = await fetch(`${AFRA_URL}/unit/findLastVersionByCode`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Basic ${AFRA_TOKEN}`,
+          },
+          body: JSON.stringify({
+            code: code,
+          }),
+        });
+        branchdata = await retVal.json();
+      }
+
+      return {
+        branchdata
+      };
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'shared.provider',
+        'getBranchData',
+        { branchCode: code },
+      );
+      throw new InternalServerErrorException(ErrorMessages.INTERNAL_ERROR);
+    }
+  }
 }

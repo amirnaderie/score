@@ -14,6 +14,7 @@ import { ApiScoreService } from './provider/api-score.service';
 import { SharedProvider } from './provider/shared.provider';
 import { TransferScoreDescription } from './entities/transfer-score-description.entity';
 import { UsedScoreDescription } from './entities/used-score-description.entity';
+import { UtilityModule } from '../../utility/utility.module'; // Import UtilityModule
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsedScoreDescription } from './entities/used-score-description.entity';
     TypeOrmModule.forFeature([Score, TransferScore, UsedScore, TransferScoreDescription, UsedScoreDescription]),
     EventModule,
     CacheModule.register(),
+    UtilityModule, // Add UtilityModule to imports
   ],
   controllers: [FrontScoreController, APIScoreController],
   providers: [
@@ -32,5 +34,3 @@ import { UsedScoreDescription } from './entities/used-score-description.entity';
   ],
 })
 export class ScoreModule {}
-
-

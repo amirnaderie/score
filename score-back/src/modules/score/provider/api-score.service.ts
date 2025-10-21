@@ -20,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from 'src/modules/auth/provider/auth.service';
 import { SharedProvider } from './shared.provider';
 import { LogEvent } from 'src/modules/event/providers/log.event';
+import { UtilityService } from 'src/utility/utility.service'; // Import UtilityService
 const moment = require('moment-jalaali');
 
 @Injectable()
@@ -36,7 +37,8 @@ export class ApiScoreService {
     private readonly bankCoreProvider: BankCoreProvider,
     private readonly configService: ConfigService,
     private readonly sharedProvider: SharedProvider,
-  ) {}
+    private readonly utilityService: UtilityService, // Inject UtilityService
+  ) { }
 
   public async findByNationalCode(nationalCode: number) {
     let scoresOfNationalCode: any[] | null;
@@ -84,7 +86,7 @@ export class ApiScoreService {
       handelError(
         error,
         this.eventEmitter,
-        'score.service',
+        'api-score.service',
         'findOneByNationalCode',
         { nationalCode: nationalCode },
       );
@@ -101,111 +103,178 @@ export class ApiScoreService {
     referenceCode: number | null,
     description: string,
   ) {
+
+
+
+    if (
+      score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
+    ) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'api-score.service',
+          method: 'transferScore',
+          message: `transfer score overflow max transferable score maxTransferableScore:${this.configService.get<string>(
+            'MAX_TRANSFERABLE_SCORE',
+          )} fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber} toNationalCode:${toNationalCode}  toAccountNumber:${toAccountNumber} score:${score}`,
+          requestBody: JSON.stringify({
+            fromNationalCode,
+            fromAccountNumber,
+            score,
+            MAX_TRANSFERABLE_SCORE: this.configService.get<string>(
+              'MAX_TRANSFERABLE_SCORE',
+            ),
+            ip,
+          }),
+          stack: '',
+        }),
+      );
+      throw new BadRequestException({
+        message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+
+    if (
+      fromNationalCode === toNationalCode &&
+      fromAccountNumber === toAccountNumber
+    ) {
+      throw new BadRequestException({
+        message: ErrorMessages.VALIDATE_INFO_FAILED,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+    let accountFrom;
+    let accountTo;
+    const scoreFromOwner =
+      await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
+    accountFrom = await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+      fromAccountNumber,
+    ]);
+
+    if (toNationalCode.toString().length < 11) {
+      const scoreToOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
+      accountTo = await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+        toAccountNumber,
+      ]);
+    }
+
+    if (accountFrom.depositType !== accountTo.depositType) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'api-score.service',
+          method: 'transferScore',
+          message: `depositType Of fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber} type:${accountFrom.depositType} and toNationalCode:${toNationalCode} toAccountNumber:${toAccountNumber} type:${accountTo.depositType} is not the same`,
+          requestBody: JSON.stringify({
+            fromNationalCode,
+            toNationalCode,
+            fromAccountNumber,
+            toAccountNumber
+          }),
+          stack: '',
+        }),
+      );
+      throw new BadRequestException({
+        message: ErrorMessages.DIFERENT_DEPOSITTYPE,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+
+    let fromBranchData: any
+    let toBranchData: any
     try {
-      if (
-        score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
-      ) {
+      fromBranchData = this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountFrom.branchCode));
+    } catch (error) {
+      throw new BadRequestException({
+        message: ErrorMessages.AFRA_ERROR,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'Internal Server Error',
+      });
+    }
+
+    try {
+      toBranchData = this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountTo.branchCode));
+    } catch (error) {
+      throw new BadRequestException({
+        message: ErrorMessages.AFRA_ERROR,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        error: 'Internal Server Error',
+      });
+    }
+    if (!fromBranchData || !toBranchData || toBranchData.province.code !== fromBranchData.province.code) {
+      this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.INFO,
+          fileName: 'api-score.service',
+          method: 'transferScore',
+          message: `this branchCode:${accountFrom.branchCode} is not in same province with branchCode:${accountTo.branchCode}`,
+          requestBody: JSON.stringify({
+            fromAccountNumber,
+            toAccountNumber,
+            fromNationalCode,
+            toNationalCode,
+          }),
+          stack: '',
+        })
+      )
+      throw new BadRequestException({
+        message: ErrorMessages.DIFERENT_PROVINCE,
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+      });
+    }
+
+    if (referenceCode) {
+      const foundReferenceCode = await this.transferScoreRepository.findOne({
+        where: {
+          referenceCode,
+        },
+      });
+      if (foundReferenceCode) {
         this.eventEmitter.emit(
           'logEvent',
           new LogEvent({
             logTypes: logTypes.INFO,
-            fileName: 'score.service',
+            fileName: 'api-score.service',
             method: 'transferScore',
-            message: `transfer score overflow max transferable score maxTransferableScore:${this.configService.get<string>(
-              'MAX_TRANSFERABLE_SCORE',
-            )} fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber} toNationalCode:${toNationalCode}  toAccountNumber:${toAccountNumber} score:${score}`,
+            message: `this referenceCode:${referenceCode} is duplicate`,
             requestBody: JSON.stringify({
-              fromNationalCode,
               fromAccountNumber,
-              score,
-              MAX_TRANSFERABLE_SCORE: this.configService.get<string>(
-                'MAX_TRANSFERABLE_SCORE',
-              ),
-              ip,
+              toAccountNumber,
             }),
             stack: '',
           }),
         );
-        throw new BadRequestException({
-          message: ErrorMessages.OVERFLOW_MAX_TRANSFERABLE_SCORE,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
+
+        throw new ConflictException({
+          message: ErrorMessages.REPETITIVE_INFO_FAILED,
+          statusCode: HttpStatus.CONFLICT,
+          error: 'Conflict',
         });
       }
-
-      if (
-        fromNationalCode === toNationalCode &&
-        fromAccountNumber === toAccountNumber
-      ) {
-        throw new BadRequestException({
-          message: ErrorMessages.VALIDATE_INFO_FAILED,
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'Bad Request',
-        });
-      }
-
-      const scoreFromOwner =
-        await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
-        fromAccountNumber,
-      ]);
-
-      if (toNationalCode.toString().length < 11) {
-        const scoreToOwner =
-          await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-        await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
-          toAccountNumber,
-        ]);
-      }
-      if (referenceCode) {
-        const foundReferenceCode = await this.transferScoreRepository.findOne({
-          where: {
-            referenceCode,
-          },
-        });
-        if (foundReferenceCode) {
-          this.eventEmitter.emit(
-            'logEvent',
-            new LogEvent({
-              logTypes: logTypes.INFO,
-              fileName: 'score.service',
-              method: 'transferScore',
-              message: `this referenceCode:${referenceCode} is duplicate`,
-              requestBody: JSON.stringify({
-                fromAccountNumber,
-                toAccountNumber,
-              }),
-              stack: '',
-            }),
-          );
-
-          throw new ConflictException({
-            message: ErrorMessages.REPETITIVE_INFO_FAILED,
-            statusCode: HttpStatus.CONFLICT,
-            error: 'Conflict',
-          });
-        }
-      }
-
-      return this.sharedProvider.transferScore(
-        fromNationalCode,
-        toNationalCode,
-        fromAccountNumber,
-        toAccountNumber,
-        score,
-        0,
-        referenceCode,
-        description,
-      );
-
-      // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
-    } catch (error) {
-      handelError(error, this.eventEmitter, 'score.service', 'transferScore', {
-        fromNationalCode,
-        toNationalCode,
-        score,
-      });
     }
+
+    return this.sharedProvider.transferScore(
+      fromNationalCode,
+      toNationalCode,
+      fromAccountNumber,
+      toAccountNumber,
+      score,
+      0,
+      referenceCode,
+      description,
+    );
+
+    // return { message: ErrorMessages.SUCCESSFULL, statusCode: 200 };
+
   }
 
   public async usedScore(
@@ -225,7 +294,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'usedScore',
           message: `The referenceCode:${referenceCode} is duplicate`,
           requestBody: JSON.stringify({
@@ -308,7 +377,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'getTransferScore',
           message: `The nationalCode:${nationalCode}  is not found`,
           requestBody: JSON.stringify({
@@ -395,7 +464,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'getTransferScoreFrom',
           message: `The nationalCode:${fromNationalCode} accountNumber:${fromAccountNumber} is not found`,
           requestBody: JSON.stringify({
@@ -456,7 +525,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'getTransferScoreTo',
           message: `The nationalCode:${toNationalCode} accountNumber:${toAccountNumber} is not found`,
           requestBody: JSON.stringify({
@@ -629,7 +698,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'acceptUsedScore',
           message: `API Accepted usedScore`,
           requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
@@ -640,7 +709,7 @@ export class ApiScoreService {
       handelError(
         error,
         this.eventEmitter,
-        'score.service',
+        'api-score.service',
         'acceptUsedScore',
         { referenceCode },
       );
@@ -678,7 +747,7 @@ export class ApiScoreService {
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
-          fileName: 'score.service',
+          fileName: 'api-score.service',
           method: 'cancleUsedScore',
           message: `Api deleted a usedScore with referenceCode: ${referenceCode}`,
           requestBody: JSON.stringify({ referenceCode, usedScoreRec }),
@@ -689,7 +758,7 @@ export class ApiScoreService {
       handelError(
         error,
         this.eventEmitter,
-        'score.service',
+        'api-score.service',
         'cancleUsedScore',
         {
           referenceCode,

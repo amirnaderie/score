@@ -178,10 +178,12 @@ export class FrontScoreService {
       });
     }
     let scoreFromOwner;
+    let accountFrom;
+    let accountTo;
     try {
       scoreFromOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+      accountFrom = await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
     } catch (error) {
@@ -203,21 +205,15 @@ export class FrontScoreService {
         });
       }
     }
+    let scoreToOwner
     try {
-      const scoreToOwner =
+      scoreToOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+      accountTo = await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
         toAccountNumber,
       ]);
 
-      return {
-        message: ErrorMessages.SUCCESSFULL,
-        statusCode: 200,
-        data: {
-          fromName: scoreFromOwner.name || '',
-          toName: scoreToOwner.name || '',
-        },
-      };
+
     } catch (error) {
       handelError(
         error,
@@ -230,7 +226,41 @@ export class FrontScoreService {
         },
       );
     }
+
+    // if (accountFrom.depositType !== accountTo.depositType) {
+    //   this.eventEmitter.emit(
+    //     'logEvent',
+    //     new LogEvent({
+    //       logTypes: logTypes.INFO,
+    //       fileName: 'front-score.service',
+    //       method: 'estelamTransferScore',
+    //       message: `depositType Of fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber} type:${accountFrom.depositType} and toNationalCode:${toNationalCode} toAccountNumber:${toAccountNumber} type:${accountTo.depositType} is not the same`,
+    //       requestBody: JSON.stringify({
+    //         fromNationalCode,
+    //         toNationalCode,
+    //         fromAccountNumber,
+    //         toAccountNumber
+    //       }),
+    //       stack: '',
+    //     }),
+    //   );
+    //   throw new BadRequestException({
+    //     message: ErrorMessages.DIFERENT_DEPOSITTYPE,
+    //     statusCode: HttpStatus.BAD_REQUEST,
+    //     error: 'Bad Request',
+    //   });
+    // }
+    return {
+      message: ErrorMessages.SUCCESSFULL,
+      statusCode: 200,
+      data: {
+        fromName: scoreFromOwner.name || '',
+        toName: scoreToOwner.name || '',
+        isDepositTypeIdentical: accountFrom.depositType === accountTo.depositType
+      },
+    };
   }
+
 
   public async transferScore(
     fromNationalCode: number,
@@ -255,10 +285,12 @@ export class FrontScoreService {
     }
 
     let scoreFromOwner;
+    let accountFrom;
+    let accountTo;
     try {
       scoreFromOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(fromNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
+      accountFrom = await this.bankCoreProvider.getDepositDetail(scoreFromOwner.cif, [
         fromAccountNumber,
       ]);
     } catch (error) {
@@ -280,11 +312,11 @@ export class FrontScoreService {
         });
       }
     }
-
+    let scoreToOwner
     if (toNationalCode.toString().length < 11) {
-      const scoreToOwner =
+      scoreToOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
-      await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
+      accountTo = await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
         toAccountNumber,
       ]);
     }
@@ -319,7 +351,6 @@ export class FrontScoreService {
           });
         }
       }
-
       return this.sharedProvider.transferScore(
         fromNationalCode,
         toNationalCode,

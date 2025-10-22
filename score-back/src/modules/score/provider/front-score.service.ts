@@ -137,7 +137,7 @@ export class FrontScoreService {
           accountNumber: score.accountNumber,
           usableScore: score.usableScore,
           transferableScore: score.transferableScore,
-          depositType: accountdata.depositType,
+          depositType: accountdata.depositType.toString(),
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
           usedScore: usedScore,
         });

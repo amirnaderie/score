@@ -78,7 +78,7 @@ export class ApiScoreService {
           accountNumber: score.accountNumber,
           usableScore: Number(score.usableScore),
           transferableScore: Number(score.transferableScore),
-          depositType: accountdata.depositType,
+          depositType: accountdata.depositType.toString(),
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
         });
       }

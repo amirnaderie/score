@@ -1135,13 +1135,13 @@ export class FrontScoreService {
 
       // Format results
       const formattedResults = rawResults.map((result) => ({
-        id: parseInt(result.referenceCode),
-        accountNumber: parseInt(result.accountNumber),
-        score: parseFloat(result.totalScore),
-        referenceCode: parseInt(result.referenceCode),
+        id:   Number(result.referenceCode),
+        accountNumber: Number(result.accountNumber),
+        score: Number(result.totalScore),
+        referenceCode: Number(result.referenceCode),
         createdAt: new Date(result.latestUpdatedAt).toISOString(),
         createdAtShamsi: moment(result.latestUpdatedAt).format('jYYYY/jMM/jDD'),
-        branchCode: parseInt(result.branchCode),
+        branchCode: Number(result.branchCode),
       }));
 
       return {

@@ -3,6 +3,7 @@ import { fetchWithAuthClient } from "@/app/lib/fetchWithAuthClient";
 export interface TaahodResponse {
   data: {
     sumTaahod: number;
+    lastUpdate: string;
   };
   message: string;
   statusCode: number;

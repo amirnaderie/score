@@ -928,6 +928,7 @@ export class FrontScoreService {
       const result = await this.dataSource.query(query);
 
       let sumTaahod = 0;
+      let lastUpdate;
       if (result && Array.isArray(result) && result.length > 0) {
         // Handle different possible result structures
         if (typeof result[0] === 'object' && result[0] !== null) {
@@ -938,9 +939,16 @@ export class FrontScoreService {
             result[0][''] ||
             result[0][Object.keys(result[0])[0]] ||
             0;
+          lastUpdate = moment(result[0].lastUpdate).format(
+            'jYYYY/jMM/jDD',
+          )
+
         } else {
           // If result[0] is a primitive value
           sumTaahod = result[0] || 0;
+          lastUpdate = moment(result[1] || 0).format(
+            'jYYYY/jMM/jDD',
+          );
         }
       }
 
@@ -950,14 +958,14 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'getTaahod',
-          message: `getTaahod procedure executed successfully, result: ${sumTaahod}`,
+          message: `getTaahod procedure executed successfully, sumTaahod: ${sumTaahod} and lastUpdate: ${lastUpdate}`,
           requestBody: '{}',
           stack: '',
         }),
       );
 
       return {
-        data: { sumTaahod },
+        data: { sumTaahod, lastUpdate },
         message: ErrorMessages.SUCCESSFULL,
         statusCode: 200,
       };

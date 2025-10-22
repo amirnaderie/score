@@ -84,20 +84,25 @@ export default function TaahodReportPage() {
 
             {/* Results Section */}
             {data?.data && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
-                    <div className="text-center space-y-4">
-
-                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
-                            <div className="space-y-2">
-                                <p className="text-lg text-gray-700 dark:text-gray-300">
-                                    مجموع تعهد:
-                                </p>
-                                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                                    {formatTaahodValue(data.data.sumTaahod)}
-                                </p>
-                            </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 grid grid-cols-2">
+                    <div className="space-y-2 flex gap-x-3">
+                        <div className="text-lg text-gray-700 dark:text-gray-300">
+                            مجموع تعهد:
+                        </div>
+                        <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {formatTaahodValue(data.data.sumTaahod)}
                         </div>
                     </div>
+                    <div className="space-y-2 flex gap-x-3">
+                        <div className="text-lg text-gray-700 dark:text-gray-300">
+                            تاریخ آخرین بروزرسانی:
+                        </div>
+                        <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {data.data.lastUpdate}
+                        </div>
+                    </div>
+
+
                 </div>
             )}
 

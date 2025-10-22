@@ -103,9 +103,6 @@ export class ApiScoreService {
     referenceCode: number | null,
     description: string,
   ) {
-
-
-
     if (
       score > Number(this.configService.get<string>('MAX_TRANSFERABLE_SCORE'))
     ) {
@@ -190,7 +187,7 @@ export class ApiScoreService {
     let fromBranchData: any
     let toBranchData: any
     try {
-      fromBranchData = this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountFrom.branchCode));
+      fromBranchData = await this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountFrom.branchCode));
     } catch (error) {
       throw new BadRequestException({
         message: ErrorMessages.AFRA_ERROR,
@@ -200,7 +197,7 @@ export class ApiScoreService {
     }
 
     try {
-      toBranchData = this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountTo.branchCode));
+      toBranchData = await this.sharedProvider.getBranchData(this.utilityService.createBranchCode(accountTo.branchCode));
     } catch (error) {
       throw new BadRequestException({
         message: ErrorMessages.AFRA_ERROR,
@@ -208,14 +205,14 @@ export class ApiScoreService {
         error: 'Internal Server Error',
       });
     }
-    if (!fromBranchData || !toBranchData || toBranchData.province.code !== fromBranchData.province.code) {
+    if (!fromBranchData || !toBranchData || toBranchData.branchdata.province.code !== fromBranchData.branchdata.province.code) {
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'api-score.service',
           method: 'transferScore',
-          message: `this branchCode:${accountFrom.branchCode} is not in same province with branchCode:${accountTo.branchCode}`,
+          message: `province of fromNationalCode:${fromNationalCode} fromAccountNumber:${fromAccountNumber}  branchCode:${accountFrom.branchCode} province:${fromBranchData?.branchdata?.province?.name}  is not the same of toNationalCode:${toNationalCode} toAccountNumber:${toAccountNumber}  branchCode:${accountTo.branchCode} province:${toBranchData?.branchdata?.province?.name}`,
           requestBody: JSON.stringify({
             fromAccountNumber,
             toAccountNumber,

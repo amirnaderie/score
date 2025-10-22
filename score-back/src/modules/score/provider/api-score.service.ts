@@ -67,12 +67,18 @@ export class ApiScoreService {
           error: 'Not Found',
         });
       }
+      const scoreOwner =
+        await this.bankCoreProvider.getCustomerBriefDetail(nationalCode);
       for (const score of scoresOfNationalCode) {
+        const accountdata = await this.bankCoreProvider.getDepositDetail(scoreOwner.cif, [
+          score.accountNumber,
+        ]);
+
         scoresRec.push({
           accountNumber: score.accountNumber,
           usableScore: Number(score.usableScore),
           transferableScore: Number(score.transferableScore),
-          depositType: '1206',
+          depositType: accountdata.depositType,
           updatedAt: moment(score.updated_at).format('jYYYY/jMM/jDD'),
         });
       }

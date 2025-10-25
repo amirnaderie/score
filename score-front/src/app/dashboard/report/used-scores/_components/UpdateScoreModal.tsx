@@ -62,7 +62,7 @@ export function UpdateScoreModal({
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="p-5 border w-96 shadow-lg rounded-md bg-white mx-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">ویرایش امتیاز</h3>
+          <h3 className="text-lg font-medium text-gray-900">امتیاز برگشتی</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -96,7 +96,7 @@ export function UpdateScoreModal({
                 if (error) setError("");
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none placeholder:text-sm focus:ring-blue-500 focus:border-blue-500 ltr text-right"
-              placeholder="مقدار جدید امتیاز را وارد نمایید"
+              placeholder="مقدار امتیاز برگشتی را وارد نمایید"
               required
               onInput={(e) => handleInput(e, 17)}
             />

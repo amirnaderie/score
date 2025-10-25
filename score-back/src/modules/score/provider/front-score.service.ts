@@ -219,7 +219,24 @@ export class FrontScoreService {
         toAccountNumber,
       ]);
 
-
+      if (accountTo.depositStatus === 'CLOSE') {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'coreBank.provide.ts',
+            method: 'getDepositDetail',
+            message: `depositNumber:${toAccountNumber} or it is close, its depositStatus is ${accountTo ? accountTo.depositStatus : 'invalid'}`,
+            requestBody: JSON.stringify({ toNationalCode, toAccountNumber }),
+            stack: '',
+          }),
+        );
+        throw new BadRequestException({
+          message: ErrorMessages.NOTACTIVE,
+          statusCode: HttpStatus.BAD_REQUEST,
+          error: 'Bad Request',
+        });
+      }
     } catch (error) {
       handelError(
         error,
@@ -1013,7 +1030,20 @@ export class FrontScoreService {
           });
         }
 
-        targetBranchCode = userData.branchCode;
+        targetBranchCode = Number(userData.branchCode);
+        if (targetBranchCode === 4050) {
+          return {
+            data: {
+              data: [],
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+            },
+            message: ErrorMessages.SUCCESSFULL,
+            statusCode: 200,
+          };
+        }
       }
 
       const skip = (page - 1) * limit;
@@ -1135,7 +1165,7 @@ export class FrontScoreService {
 
       // Format results
       const formattedResults = rawResults.map((result) => ({
-        id:   Number(result.referenceCode),
+        id: Number(result.referenceCode),
         accountNumber: Number(result.accountNumber),
         score: Number(result.totalScore),
         referenceCode: Number(result.referenceCode),

@@ -225,24 +225,7 @@ export class BankCoreProvider {
             error: 'Not Found',
           });
         }
-        if (foundDeposit.depositStatus === 'CLOSE') {
-          this.eventEmitter.emit(
-            'logEvent',
-            new LogEvent({
-              logTypes: logTypes.ERROR,
-              fileName: 'coreBank.provide.ts',
-              method: 'getDepositDetail',
-              message: `depositNumber:${depositNumber[0]} or it is close, its depositStatus is ${foundDeposit ? foundDeposit.depositStatus : 'invalid'}`,
-              requestBody: JSON.stringify({ cif, depositNumber }),
-              stack: '',
-            }),
-          );
-          throw new BadRequestException({
-            message: ErrorMessages.NOTACTIVE,
-            statusCode: HttpStatus.BAD_REQUEST,
-            error: 'Bad Request',
-          });
-        }
+
         const validDepositTypes = this.validDepositTypes.split(',');
         if (
           validDepositTypes.findIndex(

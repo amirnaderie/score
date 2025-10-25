@@ -158,12 +158,50 @@ export class ApiScoreService {
       fromAccountNumber,
     ]);
 
+     if (accountFrom.depositStatus === 'CLOSE') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'coreBank.provide.ts',
+              method: 'getDepositDetail',
+              message: `depositNumber:${fromAccountNumber} or it is close, its depositStatus is ${accountFrom ? accountFrom.depositStatus : 'invalid'}`,
+              requestBody: JSON.stringify({ fromNationalCode, fromAccountNumber }),
+              stack: '',
+            }),
+          );
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+
     if (toNationalCode.toString().length < 11) {
       const scoreToOwner =
         await this.bankCoreProvider.getCustomerBriefDetail(toNationalCode);
       accountTo = await this.bankCoreProvider.getDepositDetail(scoreToOwner.cif, [
         toAccountNumber,
       ]);
+
+      if (accountTo.depositStatus === 'CLOSE') {
+          this.eventEmitter.emit(
+            'logEvent',
+            new LogEvent({
+              logTypes: logTypes.ERROR,
+              fileName: 'coreBank.provide.ts',
+              method: 'getDepositDetail',
+              message: `depositNumber:${toAccountNumber} or it is close, its depositStatus is ${accountTo ? accountTo.depositStatus : 'invalid'}`,
+              requestBody: JSON.stringify({ toNationalCode, toAccountNumber }),
+              stack: '',
+            }),
+          );
+          throw new BadRequestException({
+            message: ErrorMessages.NOTACTIVE,
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
     }
 
     if (accountFrom.depositType !== accountTo.depositType) {

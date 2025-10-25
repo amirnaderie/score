@@ -211,7 +211,7 @@ export class ApiScoreService {
         error: 'Internal Server Error',
       });
     }
-    if (!fromBranchData || !toBranchData || toBranchData.branchdata.province.code !== fromBranchData.branchdata.province.code) {
+    if (!fromBranchData || !toBranchData || toBranchData.branchdata.province.name !== fromBranchData.branchdata.province.name) {
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({

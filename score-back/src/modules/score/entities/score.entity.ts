@@ -68,4 +68,10 @@ export class Score extends BaseEntity {
 
   @Column({ type: 'bit', nullable: true })
   isBulkInserted: boolean | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  accountType: number;
 }

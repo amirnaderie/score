@@ -947,48 +947,49 @@ export class FrontScoreService {
 
   public async getTaahod() {
     try {
-      const query = `EXEC getTaahod`;
-      const result = await this.dataSource.query(query);
+      // Get valid deposit types from environment configuration
+      const validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
 
-      let sumTaahod = 0;
-      let lastUpdate;
-      if (result && Array.isArray(result) && result.length > 0) {
-        // Handle different possible result structures
-        if (typeof result[0] === 'object' && result[0] !== null) {
-          // Check for common property names
-          sumTaahod =
-            result[0].sumTaahod ||
-            result[0].result ||
-            result[0][''] ||
-            result[0][Object.keys(result[0])[0]] ||
-            0;
-          lastUpdate = moment(result[0].lastUpdate).format(
-            'jYYYY/jMM/jDD',
-          )
+      // Split the valid deposit types into an array
+      const accountTypes = validDepositTypes?.split(',').map(type => type.trim()) || [];
+      let retVal = [];
+      // Variables to store results
+      const accountTypesCore = await this.bankCoreProvider.getBeOpenedDeposits()
+      // Process each account type
+      for (const type of accountTypes) {
+        // Execute stored procedure with accountType parameter
+        const query = `EXEC getTaahod @accountType = '${type}'`;
+        const result = await this.dataSource.query(query);
+        const sumTaahod = result[0].sumTaahod
+        const lastUpdate = result[0].lastUpdate;
+        const accountNumber = result[0].accountNumber;
+        const nationalCode = result[0].nationalCode;
 
-        } else {
-          // If result[0] is a primitive value
-          sumTaahod = result[0] || 0;
-          lastUpdate = moment(result[1] || 0).format(
-            'jYYYY/jMM/jDD',
-          );
-        }
+        const accountTypeName = accountTypesCore.find(item => item.depositType === Number(type)).depositTypeName
+
+
+        retVal.push({
+          sumTaahod,
+          lastUpdate: moment(lastUpdate).format('jYYYY/jMM/jDD'),
+          accountNumber,
+          nationalCode,
+          accountTypeName
+        })
       }
-
       this.eventEmitter.emit(
         'logEvent',
         new LogEvent({
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'getTaahod',
-          message: `getTaahod procedure executed successfully, sumTaahod: ${sumTaahod} and lastUpdate: ${lastUpdate}`,
+          message: `getTaahod procedure executed successfully`,
           requestBody: '{}',
           stack: '',
         }),
       );
 
       return {
-        data: { sumTaahod, lastUpdate },
+        data: retVal,
         message: ErrorMessages.SUCCESSFULL,
         statusCode: 200,
       };

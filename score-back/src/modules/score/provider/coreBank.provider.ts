@@ -20,6 +20,7 @@ export class BankCoreProvider {
   private loginUrl: string;
   private depositUrl: string;
   private getCustomerDetail: string;
+  private beOpenedDeposits: string;
   private apiKey: string;
   private validDepositTypes: string;
 
@@ -38,6 +39,9 @@ export class BankCoreProvider {
     this.depositUrl = this.configService.get<string>('BANKCORE_DEPOSIT_URL');
     this.getCustomerDetail = this.configService.get<string>(
       'BANKCORE_GET_CUSTOMER_BRIEF_DETAIL_URL',
+    );
+    this.beOpenedDeposits = this.configService.get<string>(
+      'BANKCORE_BE_OPENED_DEPOSITS_URL',
     );
     this.apiKey = this.configService.get<string>('BANKCORE_API_KEY');
     this.userName = this.configService.get<string>('BANKCORE_USERNAME');
@@ -169,6 +173,60 @@ export class BankCoreProvider {
         'coreBank.provide.ts',
         'getCustomerBriefDetail',
         { nationalCode },
+      );
+    }
+  }
+  async getBeOpenedDeposits(): Promise<any> {
+    const sessionId = await this.getsessionId();
+
+    const url = `${this.beOpenedDeposits}?context=[{"key":"SESSIONID","value":"${sessionId}"}]`;
+    try {
+      const response = await axios.post(
+        url,
+        {
+          length: "100"
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: this.apiKey,
+            // If you need to set a static or dynamic cookie, add it here:
+            // 'Cookie': 'cookiesession1=678B286AF6E8CEA6559DD0AA7F5B527B',
+          },
+          // If you need to send cookies, you can use 'withCredentials: true' and set up axios accordingly.
+        },
+      );
+      if (
+        response.status == 200 &&
+        response?.data?.result?.beOpenedDeposits.length > 0
+
+      ) {
+        return response?.data?.result?.beOpenedDeposits;
+      } else {
+        this.eventEmitter.emit(
+          'logEvent',
+          new LogEvent({
+            logTypes: logTypes.ERROR,
+            fileName: 'coreBank.provide.ts',
+            method: 'getBeOpenedDeposits',
+            message: `getBeOpenedDeposits not found data`,
+            requestBody: "",
+            stack: '',
+          }),
+        );
+        throw new NotFoundException({
+          message: ErrorMessages.NOT_FOUND,
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+        });
+      }
+    } catch (error) {
+      handelError(
+        error,
+        this.eventEmitter,
+        'coreBank.provide.ts',
+        'getBeOpenedDeposits',
+        {},
       );
     }
   }

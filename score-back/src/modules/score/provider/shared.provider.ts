@@ -362,6 +362,7 @@ export class SharedProvider {
             nationalCode: toNationalCode,
             score: 0,
             updatedAt: validScore.updated_at,
+            accountType:validScore.accountType,
           });
           const savedScore = await this.scoreRepository.save(localScore);
 
@@ -382,6 +383,7 @@ export class SharedProvider {
             nationalCode: toNationalCode,
             score: 0,
             updatedAt: validScore.updated_at,
+            accountType:validScore.accountType,
           });
           const savedScore = await this.scoreRepository.save(localScore);
 

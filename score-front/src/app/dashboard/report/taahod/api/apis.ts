@@ -1,10 +1,14 @@
 import { fetchWithAuthServer } from "@/app/lib/fetchWithAuthServer";
 
+// Define the interface for individual taahod items
+export interface TaahodItem {
+  sumTaahod: number | string;
+  lastUpdate: string;
+  accountTypeName: string;
+}
+
 export interface TaahodResponse {
-  data: {
-    sumTaahod: number;
-    lastUpdate: string;
-  };
+  data: TaahodItem[];
   message: string;
   statusCode: number;
 }

@@ -77,6 +77,17 @@ export class AuthService {
     const decodedHeader: any = jwtDecode(tokenFromSSO.data.access_token);
     const { aud, exp } = decodedHeader;
     if (aud !== this.configService.get('CLIENT_ID')) {
+     this.eventEmitter.emit(
+        'logEvent',
+        new LogEvent({
+          logTypes: logTypes.ERROR,
+          fileName: 'auth.service',
+          method: 'authenticate',
+          message: 'clientId is invalid',
+          requestBody:"" ,
+          stack:"" ,
+        }),
+      );
       throw new UnauthorizedException({
         message: ErrorMessages.FORBIDDEN,
         statusCode: HttpStatus.UNAUTHORIZED,

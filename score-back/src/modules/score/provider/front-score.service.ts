@@ -966,8 +966,6 @@ export class FrontScoreService {
         const nationalCode = result[0].nationalCode;
 
         const accountTypeName = accountTypesCore.find(item => item.depositType === Number(type)).depositTypeName
-
-
         retVal.push({
           sumTaahod,
           lastUpdate: moment(lastUpdate).format('jYYYY/jMM/jDD'),

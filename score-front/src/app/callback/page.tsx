@@ -19,7 +19,7 @@ function AuthCallbackInner() {
   const signOut = async () => {
     try {
       await logOut();
-    } catch (error) {}
+    } catch (error) { }
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
     router.push(`${logout_uri}api/auth/logout`);
@@ -52,7 +52,8 @@ function AuthCallbackInner() {
             updateUserData(userData);
             router.push("/dashboard");
           } else {
-            toast.error("خطا در احراز هویت");
+            const error = await response.json();
+            toast.error(error.message);
             updateUserData(null);
             if (response.status === 401) {
               await signOut();

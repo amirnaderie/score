@@ -1,6 +1,8 @@
 import {
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -44,13 +46,13 @@ export class AuthService {
       redirect_uri: this.redirect_uri,
     });
     let tokenFromSSO;
-
-    tokenFromSSO = await axios.post(`${this.authUrl}token`, parameterValue, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
     try {
+      tokenFromSSO = await axios.post(`${this.authUrl}token`, parameterValue, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
     } catch (error) {
       this.eventEmitter.emit(
         'logEvent',
@@ -63,17 +65,37 @@ export class AuthService {
           stack: error.stack,
         }),
       );
+
+      throw new ServiceUnavailableException({
+        message: ErrorMessages.ZARIR_EXCEPTION,
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'SERVICE_UNAVAILABLE',
+      });
+
+
     }
     const decodedHeader: any = jwtDecode(tokenFromSSO.data.access_token);
     const { aud, exp } = decodedHeader;
     if (aud !== this.configService.get('CLIENT_ID')) {
-      throw new UnauthorizedException(
-        'شما مجوز دسترسی به این سامانه را ندارید',
-      );
+      throw new UnauthorizedException({
+        message: ErrorMessages.FORBIDDEN,
+        statusCode: HttpStatus.UNAUTHORIZED,
+        error: 'UNAUTHORIZED',
+      });
+
     }
 
+    let personelData
     const userData = await this.verifyToken(tokenFromSSO.data.access_token);
-    const personelData = await this.getPersonalData(userData.username);
+    try {
+      personelData = await this.getPersonalData(userData.username);
+    } catch (error) {
+      throw new ServiceUnavailableException({
+        message: ErrorMessages.AFRA_EXCEPTION,
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'SERVICE_UNAVAILABLE',
+      });
+    }
 
     const { cookieOptions } = await this.createOption(exp);
     response.cookie(

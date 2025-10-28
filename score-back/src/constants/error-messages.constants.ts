@@ -17,6 +17,8 @@ export const ErrorMessages = {
   OVERFLOW_MAX_TRANSFERABLE_SCORE: 'میزان انتقال بیش از سقف مجاز است',
   FORBIDDEN: 'عدم مجوز دسترسی',
   USER_NOT_FOUND: 'اطلاعات کاربر در سامانه افرا یافت نشد',
+  AFRA_EXCEPTION: 'خطا سامانه ساختار سازمانی',
+  ZARIR_EXCEPTION: 'خطا سامانه احراز هویت',
   COREBANKING_ERROR: 'خطا در اتصال به کر بانکینگ',
   INVALID_TYPE: 'نوع حساب معتبر نیست',
   DIFERENT_DEPOSITTYPE: 'نوع حساب ها تطابق ندارند',

@@ -16,6 +16,7 @@ export default function SupportPage() {
   const [accountNumber, setAccountNumber] = useState("");
   const [score, setScore] = useState<number | string>("");
   const [updatedAt, setUpdatedAt] = useState("");
+  const [accountType, setAccountType] = useState<number | string>("");
   const [scoreId, setScoreId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -26,6 +27,7 @@ export default function SupportPage() {
   const [showScoresList, setShowScoresList] = useState(false);
   const [nationalCodeError, setNationalCodeError] = useState("");
   const [accountNumberError, setAccountNumberError] = useState("");
+  const [accountTypeError, setAccountTypeError] = useState("");
   const [searchPerformed, setSearchPerformed] = useState(false);
 
   const validateNationalCode = (value: string) => {
@@ -58,6 +60,22 @@ export default function SupportPage() {
     return retVal;
   };
 
+  const validateAccountType = (value: string) => {
+    let retVal = false;
+    if (!isEditing && isAdding && !value) {
+      // When adding a new score, accountType is required
+      setAccountTypeError("نوع حساب الزامی است");
+    } else if (!isEditing && value && !/^\d{1,5}$/.test(value)) {
+      // When adding and value exists, validate format
+      setAccountTypeError("نوع حساب باید عددی با حداکثر 5 رقم باشد");
+    } else {
+      // No error
+      setAccountTypeError("");
+      retVal = true;
+    }
+    return retVal;
+  };
+
   const handleSearch = async () => {
     if (!nationalCode || !accountNumber) {
       toast.error("لطفاً کد ملی و شماره حساب را وارد نمایید");
@@ -83,12 +101,14 @@ export default function SupportPage() {
           setScoreId(null);
           setScore("");
           setUpdatedAt("");
+          setAccountType("");
           setSelectedScore(null);
           toast.success(`امتیاز یافت شد!`);
         } else if (data && data.id) {
           // For backward compatibility if API still returns a single object
           setScoreId(data.id);
           setScore(data.score);
+          setAccountType(data.accountType || "");
           // Convert date to Persian format if it's Gregorian
           const date = new Date(data.updatedAt);
           const persianDate = date
@@ -105,6 +125,7 @@ export default function SupportPage() {
           setScoreId(null);
           setScore("");
           setUpdatedAt("");
+          setAccountType("");
           setIsEditing(false);
           setIsAdding(false);
           setSelectedScore(null);
@@ -117,6 +138,7 @@ export default function SupportPage() {
         setScoreId(null);
         setScore("");
         setUpdatedAt("");
+        setAccountType("");
         setIsEditing(false);
         setIsAdding(false);
         setSelectedScore(null);
@@ -137,10 +159,17 @@ export default function SupportPage() {
   };
 
   const handleSubmit = async () => {
-    if (!score || !updatedAt) {
+    if (!score || !updatedAt || (!isEditing && !accountType)) {
       toast.error("لطفاً تمام فیلدها را پر کنید");
       return;
     }
+
+    // Validate accountType when adding new score
+    if (!isEditing && !validateAccountType(accountType.toString())) {
+      toast.error("لطفاً نوع حساب را به درستی وارد کنید");
+      return;
+    }
+
     setSaveLoading(true);
     try {
       const gregorianDate = convertToGregorian(updatedAt);
@@ -155,7 +184,8 @@ export default function SupportPage() {
         const response = await ScoreApi.updateScore(
           scoreId,
           Number(score.toString().replaceAll(",", "")),
-          gregorianDate
+          gregorianDate,
+          Number(accountType) || undefined
         );
         if (response.status === 200) {
           toast.success("امتیاز با موفقیت بروزرسانی شد!");
@@ -168,6 +198,7 @@ export default function SupportPage() {
                   ...item,
                   score: Number(score.toString().replaceAll(",", "")),
                   updatedAt: gregorianDate,
+                  accountType: accountType ? Number(accountType) : item.accountType,
                 };
               }
               return item;
@@ -188,6 +219,7 @@ export default function SupportPage() {
           accountNumber,
           score: Number(score.toString().replaceAll(",", "")),
           updatedAt: gregorianDate,
+          accountType: Number(accountType),
         });
         if (response.status === 200) {
           toast.success("امتیاز با موفقیت ایجاد شد!");
@@ -200,6 +232,7 @@ export default function SupportPage() {
             accountNumber,
             score: Number(score.toString().replaceAll(",", "")),
             updatedAt: gregorianDate,
+            accountType: Number(accountType),
           };
           setScores([...scores, newScore]);
           setSelectedScore(null);
@@ -223,6 +256,7 @@ export default function SupportPage() {
     setSelectedScore(score);
     setScoreId(score.id);
     setScore(score.score);
+    setAccountType(score.accountType || "");
     // Convert date to Persian format if it's Gregorian
     const date = new Date(score.updatedAt);
     const persianDate = date.toLocaleDateString("fa-IR").replace(/\//g, "/");
@@ -247,11 +281,10 @@ export default function SupportPage() {
               onInput={(e) => handleInput(e, 11)}
               id="nationalCode"
               autoFocus
-              className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right ${
-                nationalCodeError
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:ring-blue-500"
-              }`}
+              className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right ${nationalCodeError
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+                }`}
               value={nationalCode}
               onChange={(e) => {
                 setNationalCode(e.target.value);
@@ -283,11 +316,10 @@ export default function SupportPage() {
               id="accountNumber"
               onInput={(e) => handleInput(e, 14)}
               className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right
-              ${
-                accountNumberError
+              ${accountNumberError
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-blue-500"
-              }
+                }
               `}
               value={accountNumber}
               maxLength={14}
@@ -341,6 +373,7 @@ export default function SupportPage() {
                   setScoreId(null);
                   setScore("");
                   setUpdatedAt("");
+                  setAccountType("");
                   setSelectedScore(null);
                   setShowScoresList(false);
                 }}
@@ -358,6 +391,12 @@ export default function SupportPage() {
                       className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                     >
                       شماره حساب
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                    >
+                      نوع حساب
                     </th>
                     <th
                       scope="col"
@@ -396,6 +435,9 @@ export default function SupportPage() {
                           {scoreItem.accountNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {scoreItem.accountType || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {formatNumber(scoreItem.score.toString())}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -432,6 +474,7 @@ export default function SupportPage() {
                   setScoreId(null);
                   setScore("");
                   setUpdatedAt("");
+                  setAccountType("");
                   setSelectedScore(null);
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-200 text-sm"
@@ -448,7 +491,7 @@ export default function SupportPage() {
               {isEditing ? "ویرایش امتیاز" : "ایجاد امتیاز جدید"}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label
                   htmlFor="score"
@@ -505,12 +548,47 @@ export default function SupportPage() {
                   placeholder="مثال: 14040615"
                 />
               </div>
+
+              {!isEditing && <div>
+                <label
+                  htmlFor="accountType"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
+                  نوع حساب
+                </label>
+                <input
+                  type="number"
+                  id="accountType"
+                  className={`w-full px-3 py-2 border ltr rounded-md focus:outline-none focus:ring-2 placeholder:text-sm placeholder:text-right ${accountTypeError
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-blue-500"
+                    }`}
+                  value={accountType}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Only allow numbers with max 5 digits
+                    if (value === "" || /^\d{1,5}$/.test(value)) {
+                      setAccountType(value);
+                      // Validate when value changes
+                      validateAccountType(value);
+                    }
+                  }}
+                  placeholder="نوع حساب را وارد نمایید"
+                  maxLength={5}
+                  onInput={(e) => handleInput(e, 5)}
+                  readOnly={isEditing}
+                />
+                {accountTypeError && (
+                  <p className="text-red-500 text-xs mt-1">{accountTypeError}</p>
+                )}
+
+              </div>}
             </div>
 
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSubmit}
-                disabled={loading || saveLoading || !score || !updatedAt}
+                disabled={loading || saveLoading || !score || !updatedAt || (!isEditing && (!accountType || !!accountTypeError))}
                 className="bg-green-600 flex justify-center min-w-36 hover:bg-green-700 text-white font-bold py-2 px-6 cursor-pointer rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 text-sm"
               >
                 {saveLoading ? (
@@ -525,6 +603,7 @@ export default function SupportPage() {
                 onClick={() => {
                   setScore("");
                   setUpdatedAt("");
+                  setAccountType("");
                   setIsEditing(false);
                   setIsAdding(false);
                   setScoreId(null);

@@ -37,6 +37,7 @@ export const ScoreApi = {
     accountNumber: string;
     score: number;
     updatedAt: string;
+    accountType?: number;
   }) => {
     return fetchWithAuthClient(
       `${BASE_URL}/front/score/scores`,
@@ -49,12 +50,16 @@ export const ScoreApi = {
 
   },
 
-  updateScore: async (id: number, score: number, updatedAt: string) => {
+  updateScore: async (id: number, score: number, updatedAt: string, accountType?: number) => {
+    const payload: any = { score, updatedAt };
+    if (accountType !== undefined) {
+      payload.accountType = accountType;
+    }
     return fetchWithAuthClient(
       `${BASE_URL}/front/score/scores/${id}`,
       {
         method: "PATCH",
-        body: JSON.stringify({ score, updatedAt }),
+        body: JSON.stringify(payload),
         credentials: "include",
       }
     );

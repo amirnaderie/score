@@ -809,7 +809,20 @@ export class FrontScoreService {
 
   public async createScore(createScoreDto: CreateScoreDto, user: User) {
     try {
-      const { nationalCode, accountNumber, score, updatedAt } = createScoreDto;
+      const { nationalCode, accountNumber, score, updatedAt, accountType } = createScoreDto;
+
+      // Validate accountType against VALID_DEPOSIT_TYPES
+      const validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
+      if (validDepositTypes) {
+        const validTypes = validDepositTypes.split(',').map(type => type.trim()) || [];
+        if (!validTypes.includes(accountType.toString())) {
+          throw new BadRequestException({
+            message: 'نوع حساب معتبر نیست',
+            statusCode: HttpStatus.BAD_REQUEST,
+            error: 'Bad Request',
+          });
+        }
+      }
 
       const scoreOwner = await this.bankCoreProvider.getCustomerBriefDetail(
         Number(nationalCode),
@@ -824,6 +837,7 @@ export class FrontScoreService {
         score: score,
         updatedAt: new Date(updatedAt),
         insertedAt: new Date(),
+        accountType: accountType,
       });
 
       const savedScore = await this.scoreRepository.save(newScore);
@@ -834,7 +848,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'createScore',
-          message: `Score created successfully for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}, score: ${createScoreDto.score} by personalCode:${user.userName}`,
+          message: `Score created successfully for nationalCode: ${nationalCode}, accountNumber: ${accountNumber}, score: ${createScoreDto.score}, accountType: ${accountType} by personalCode:${user.userName}`,
           requestBody: JSON.stringify(createScoreDto),
           stack: '',
         }),
@@ -893,6 +907,22 @@ export class FrontScoreService {
           error: 'Score not found',
         });
       }
+      
+      // Validate accountType if it's being updated
+      if (updateScoreDto.accountType !== undefined) {
+        const validDepositTypes = this.configService.get<string>('VALID_DEPOSIT_TYPES');
+        if (validDepositTypes) {
+          const validTypes = validDepositTypes.split(',').map(type => type.trim()) || [];
+          if (!validTypes.includes(updateScoreDto.accountType.toString())) {
+            throw new BadRequestException({
+              message: 'نوع حساب معتبر نیست',
+              statusCode: HttpStatus.BAD_REQUEST,
+              error: 'Bad Request',
+            });
+          }
+        }
+      }
+
       const beforScore = score.score;
       if (updateScoreDto.score !== undefined) {
         score.score = updateScoreDto.score;
@@ -901,6 +931,10 @@ export class FrontScoreService {
       const beforUpdatedAt = moment(date).format('jYYYY/jMM/jDD HH:mm:ss');
       if (updateScoreDto.updatedAt !== undefined) {
         score.updatedAt = new Date(updateScoreDto.updatedAt);
+      }
+      // Handle accountType update
+      if (updateScoreDto.accountType !== undefined) {
+        score.accountType = updateScoreDto.accountType;
       }
 
       const updatedScore = await this.scoreRepository.save(score);
@@ -911,7 +945,7 @@ export class FrontScoreService {
           logTypes: logTypes.INFO,
           fileName: 'front-score.service',
           method: 'updateScore',
-          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${beforScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter:${updateScoreDto.score}, by personalCode:${user.userName}`,
+          message: `Score updated successfully for id: ${id}, nationalCode: ${score.nationalCode}, accountNumber: ${score.accountNumber}, scoreBefor: ${beforScore}, beforeUpdatedAt: ${beforUpdatedAt}, scoreAfter:${updateScoreDto.score}, accountType: ${updateScoreDto.accountType}, by personalCode:${user.userName}`,
           requestBody: JSON.stringify({ id, updateScoreDto }),
           stack: '',
         }),

@@ -7,6 +7,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsOptional,
 } from 'class-validator';
 
 export class CreateScoreDto {
@@ -34,4 +35,9 @@ export class CreateScoreDto {
   @IsString()
   @MaxLength(10)
   updatedAt: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Type(() => Number)
+  accountType: number;
 }

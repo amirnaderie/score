@@ -8,4 +8,8 @@ export class UpdateScoreDto {
   @IsOptional()
   @IsString()
   updatedAt?: string;
+
+  @IsOptional()
+  @IsNumber()
+  accountType?: number;
 }
